@@ -1,0 +1,87 @@
+name: Build AQLIYA Android APK
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-apk:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install NPM Dependencies
+        run: npm ci || npm install
+
+      - name: Build Web Production Assets
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://zydgpjqllgthkqabphth.supabase.co' }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp5ZGdwanFsbGd0aGtxYWJwaHRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQwODA2MDksImV4cCI6MjEwOTY1NjYwOX0.rpWxWfDfRtGdjKo7NWmIY38F795r5w6sRIsgGaQo5n8' }}
+        run: npm run build
+
+      - name: Sync Capacitor Android
+        run: npx cap sync android
+
+      - name: Make Gradle Wrapper Executable
+        run: chmod +x android/gradlew
+
+      - name: Build Debug APK with Gradle
+        run: |
+          cd android
+          ./gradlew assembleDebug --stacktrace
+
+      - name: Rename & Prepare APK
+        run: |
+          mkdir -p build-output
+          cp android/app/build/outputs/apk/debug/app-debug.apk build-output/AqliyaHQ-Android-v1.0.apk
+
+      - name: Upload APK as Workflow Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AqliyaHQ-Android-v1.0-APK
+          path: build-output/AqliyaHQ-Android-v1.0.apk
+          retention-days: 30
+
+      - name: Create GitHub Release with APK
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
+        with:
+          tag_name: v1.0.0-${{ github.run_number }}
+          name: AQLIYA HQ Android Release v1.0.0 (Build ${{ github.run_number }})
+          body: |
+            ## 🚀 إطلاق تطبيق عقلية للأندرويد (AQLIYA HQ Mobile APK)
+            - **الإصدار:** v1.0.0 (Build ${{ github.run_number }})
+            - **الحالة:** جاهز للتثبيت المباشر على هاتف الأندرويد.
+            - **الميزات:**
+              - التقاط سريع للريلزات والفيديوهات عبر زر المشاركة.
+              - مكالمة صوتية حية بدون لمس الشاشة (Hands-Free).
+              - مزامنة سحابية لحظية مع قاعدة بيانات Supabase.
+              - رادار شبكة الأفكار ومتابعة مشاريع NexusOS.
+          files: build-output/AqliyaHQ-Android-v1.0.apk
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

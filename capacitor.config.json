@@ -1,0 +1,11 @@
+{
+  "appId": "com.aqliya.hq",
+  "appName": "عقلية | AQLIYA HQ",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "android": {
+    "allowMixedContent": true,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": true
+  }
+}
