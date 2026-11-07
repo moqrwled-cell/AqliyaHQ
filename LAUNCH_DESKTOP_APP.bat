@@ -1,4 +1,9 @@
 @echo off
-title عقلية | AQLIYA HQ Desktop App
+title عقلية | AQLIYA HQ
 cd /d "%~dp0"
-npx electron .
+if exist "node_modules\electron\dist\electron.exe" (
+    start "" "node_modules\electron\dist\electron.exe" .
+) else (
+    npm run app
+)
+exit

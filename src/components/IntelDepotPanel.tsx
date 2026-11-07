@@ -6,14 +6,10 @@ import {
   ExternalLink, 
   Plus, 
   Search, 
-  Filter, 
-  CheckCircle, 
-  Tag, 
-  PlaySquare, 
-  Camera, 
   Lightbulb, 
   Sparkles,
-  Bookmark
+  Bookmark,
+  X
 } from 'lucide-react';
 import type { IntelItem, IntelCategory, IntelPlatform, Mission } from '../types';
 import { tacticalAudio } from '../lib/audio';
@@ -44,7 +40,6 @@ export const IntelDepotPanel: React.FC<IntelDepotPanelProps> = ({
   const [selectedMissionId, setSelectedMissionId] = useState<string>('');
   const [tagInput, setTagInput] = useState('');
 
-  // Auto-detect platform from URL
   const detectPlatform = (link: string): IntelPlatform => {
     const l = link.toLowerCase();
     if (l.includes('youtube.com') || l.includes('youtu.be')) return 'youtube';
@@ -57,7 +52,6 @@ export const IntelDepotPanel: React.FC<IntelDepotPanelProps> = ({
 
   const handleUrlChange = (newUrl: string) => {
     setUrl(newUrl);
-    // If user hasn't set title yet, suggest title based on domain
     if (!title) {
       if (newUrl.includes('instagram.com/reel')) {
         setTitle('ريلز تقني استخباراتي');
@@ -93,7 +87,6 @@ export const IntelDepotPanel: React.FC<IntelDepotPanelProps> = ({
       thumbnail_url: null,
     });
 
-    // Reset Form
     setTitle('');
     setUrl('');
     setProblemSolved('');
@@ -103,7 +96,6 @@ export const IntelDepotPanel: React.FC<IntelDepotPanelProps> = ({
     setShowAddModal(false);
   };
 
-  // Filtered Items
   const filteredItems = items.filter((item) => {
     if (activeTab !== 'all' && item.category !== activeTab) return false;
     if (searchQuery.trim()) {
@@ -117,19 +109,21 @@ export const IntelDepotPanel: React.FC<IntelDepotPanelProps> = ({
   });
 
   return (
-    <div className="flex flex-col h-full hud-panel rounded-xl border border-slate-800 p-4 overflow-hidden">
+    <div className="flex flex-col h-full craft-surface rounded-2xl p-4 overflow-hidden text-right">
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between pb-3 border-b border-slate-800/80 mb-3 gap-2">
-        <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/30">
+      <div className="flex flex-wrap items-center justify-between pb-3 border-b craft-border mb-3 gap-2">
+        <div className="flex items-center gap-2.5">
+          <div className="p-2 rounded-xl bg-zinc-800/80 border craft-border text-zinc-200">
             <Database className="h-4 w-4" />
           </div>
           <div>
-            <h2 className="text-sm font-bold text-white flex items-center gap-1.5">
-              <span>بنك الاستخبارات والحلول</span>
-              <span className="text-[10px] font-mono-hud text-amber-400">// INTEL DEPOT</span>
-            </h2>
-            <p className="text-[11px] text-slate-400">خزانة الفيديوهات والريلزات والحلول السريعة</p>
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-bold text-zinc-100">بنك الاستخبارات والحلول</h2>
+              <span className="text-[10px] font-telemetry px-1.5 py-0.5 rounded bg-zinc-800/80 border craft-border text-zinc-400">
+                INTEL DEPOT
+              </span>
+            </div>
+            <p className="text-[11px] text-zinc-400 mt-0.5">خزانة الفيديوهات والريلزات والحلول السريعة</p>
           </div>
         </div>
 
@@ -138,17 +132,16 @@ export const IntelDepotPanel: React.FC<IntelDepotPanelProps> = ({
             tacticalAudio.playBlip();
             setShowAddModal(true);
           }}
-          className="flex items-center gap-1.5 text-xs font-semibold text-amber-300 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 px-3 py-1.5 rounded-lg transition-all active:scale-95 glow-amber"
+          className="flex items-center gap-1.5 text-xs font-medium text-zinc-200 bg-zinc-800/80 hover:bg-zinc-700/80 border craft-border px-3 py-1.5 rounded-lg transition-all active:scale-95 shadow-sm"
         >
-          <Plus className="h-3.5 w-3.5" />
+          <Plus className="h-3.5 w-3.5 text-zinc-300" />
           <span>حفظ رابط جديد</span>
         </button>
       </div>
 
-      {/* Tabs & Search Filter */}
+      {/* Filter Tabs & Search */}
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-        {/* Category Filter Tabs */}
-        <div className="flex rounded-lg bg-slate-900/80 p-0.5 border border-slate-800">
+        <div className="flex rounded-lg bg-zinc-900 p-0.5 border craft-border">
           <button
             onClick={() => {
               tacticalAudio.playBlip();
@@ -156,8 +149,8 @@ export const IntelDepotPanel: React.FC<IntelDepotPanelProps> = ({
             }}
             className={`px-2.5 py-1 text-xs rounded-md font-medium transition-all ${
               activeTab === 'all'
-                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                : 'text-slate-400 hover:text-slate-200'
+                ? 'bg-zinc-800 text-zinc-100 shadow-sm'
+                : 'text-zinc-400 hover:text-zinc-200'
             }`}
           >
             الكل ({items.length})
@@ -169,8 +162,8 @@ export const IntelDepotPanel: React.FC<IntelDepotPanelProps> = ({
             }}
             className={`px-2.5 py-1 text-xs rounded-md font-medium transition-all flex items-center gap-1 ${
               activeTab === 'solution_reel'
-                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                : 'text-slate-400 hover:text-slate-200'
+                ? 'bg-zinc-800 text-zinc-100 shadow-sm'
+                : 'text-zinc-400 hover:text-zinc-200'
             }`}
           >
             <Flame className="h-3 w-3 text-amber-400" />
@@ -183,8 +176,8 @@ export const IntelDepotPanel: React.FC<IntelDepotPanelProps> = ({
             }}
             className={`px-2.5 py-1 text-xs rounded-md font-medium transition-all flex items-center gap-1 ${
               activeTab === 'watch_later'
-                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                : 'text-slate-400 hover:text-slate-200'
+                ? 'bg-zinc-800 text-zinc-100 shadow-sm'
+                : 'text-zinc-400 hover:text-zinc-200'
             }`}
           >
             <Video className="h-3 w-3 text-cyan-400" />
@@ -192,51 +185,38 @@ export const IntelDepotPanel: React.FC<IntelDepotPanelProps> = ({
           </button>
         </div>
 
-        {/* Search input */}
         <div className="relative flex-1 min-w-[140px] max-w-xs">
-          <Search className="absolute right-2.5 top-2 h-3.5 w-3.5 text-slate-500" />
+          <Search className="absolute right-2.5 top-2 h-3.5 w-3.5 text-zinc-500" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="بحث في الحلول والوسوم..."
-            className="w-full rounded-lg border border-slate-800 bg-slate-900/60 pr-8 pl-3 py-1 text-xs text-slate-200 placeholder:text-slate-600 outline-none focus:border-amber-500/40"
+            className="w-full rounded-lg border craft-border bg-black/60 pr-8 pl-3 py-1 text-xs text-zinc-100 placeholder:text-zinc-600 outline-none focus:border-zinc-500"
           />
         </div>
       </div>
 
-      {/* Cards Matrix Grid */}
-      <div className="flex-1 overflow-y-auto space-y-2.5 pr-1">
+      {/* Cards List */}
+      <div className="flex-1 overflow-y-auto space-y-2.5 pr-1 text-xs">
         {filteredItems.length > 0 ? (
           filteredItems.map((item) => (
             <div
               key={item.id}
-              className="rounded-xl border border-slate-800/90 bg-[#0a0d15]/90 p-3 hover:border-slate-700 transition-all hover:bg-[#0c101a] group"
+              className="rounded-xl border craft-border bg-zinc-900/60 p-3 hover:bg-zinc-900/90 transition-all"
             >
               <div className="flex items-start justify-between gap-2 mb-2">
                 <div className="flex items-center gap-2 flex-1 min-w-0">
-                  <span className="p-1 rounded-md bg-slate-900 border border-slate-800 text-slate-300 shrink-0">
-                    {item.platform === 'youtube' && <PlaySquare className="h-3.5 w-3.5 text-red-400" />}
-                    {item.platform === 'instagram' && <Camera className="h-3.5 w-3.5 text-pink-400" />}
-                    {item.platform === 'tiktok' && <Flame className="h-3.5 w-3.5 text-cyan-400" />}
-                    {!['youtube', 'instagram', 'tiktok'].includes(item.platform) && (
-                      <Bookmark className="h-3.5 w-3.5 text-amber-400" />
-                    )}
+                  <span className="p-1 rounded-md bg-zinc-800 border craft-border text-zinc-400 font-telemetry text-[10px] uppercase">
+                    {item.platform || 'WEB'}
                   </span>
-                  <h4 className="text-xs font-bold text-white truncate flex-1">{item.title}</h4>
+                  <h4 className="text-xs font-bold text-zinc-100 truncate flex-1">{item.title}</h4>
                 </div>
 
-                {/* Status Badge */}
                 <select
-                  value={item.status}
+                  value={item.status || 'unreviewed'}
                   onChange={(e) => onUpdateStatus(item.id, e.target.value as any)}
-                  className={`text-[10px] font-mono-hud font-bold rounded px-1.5 py-0.5 border outline-none bg-slate-950 cursor-pointer ${
-                    item.status === 'implemented'
-                      ? 'border-emerald-500/40 text-emerald-400'
-                      : item.status === 'reviewed'
-                      ? 'border-cyan-500/40 text-cyan-400'
-                      : 'border-slate-700 text-slate-400'
-                  }`}
+                  className="text-[10px] font-telemetry rounded px-1.5 py-0.5 border craft-border outline-none bg-zinc-800 text-zinc-300 cursor-pointer"
                 >
                   <option value="unreviewed">لم تراجع</option>
                   <option value="reviewed">تمت المشاهدة</option>
@@ -244,31 +224,28 @@ export const IntelDepotPanel: React.FC<IntelDepotPanelProps> = ({
                 </select>
               </div>
 
-              {/* Problem Solved & Solution Callout */}
               {item.problem_solved && (
-                <div className="mb-2 rounded-lg bg-amber-500/10 border border-amber-500/20 p-2 text-xs text-amber-200/90 flex items-start gap-1.5">
+                <div className="mb-2 rounded-lg bg-zinc-950/70 border craft-border p-2 text-xs text-zinc-300 flex items-start gap-1.5">
                   <Lightbulb className="h-3.5 w-3.5 text-amber-400 shrink-0 mt-0.5" />
                   <div>
-                    <span className="font-bold text-amber-300">الحل المستفاد: </span>
-                    <span>{item.problem_solved}</span>
+                    <span className="font-bold text-zinc-200">الحل المستفاد: </span>
+                    <span className="leading-relaxed">{item.problem_solved}</span>
                   </div>
                 </div>
               )}
 
-              {/* Key Takeaways */}
               {item.key_takeaways && (
-                <p className="text-[11px] text-slate-300 mb-2 leading-relaxed bg-slate-900/40 p-1.5 rounded border border-slate-800/40">
+                <p className="text-[11px] text-zinc-400 mb-2 leading-relaxed bg-black/20 p-1.5 rounded border craft-border">
                   {item.key_takeaways}
                 </p>
               )}
 
-              {/* Tags & Actions */}
-              <div className="flex items-center justify-between text-[11px] pt-1 border-t border-slate-800/50">
+              <div className="flex items-center justify-between text-[11px] pt-1.5 border-t craft-border">
                 <div className="flex flex-wrap items-center gap-1.5">
                   {item.tags?.map((tag, idx) => (
                     <span
                       key={idx}
-                      className="rounded bg-slate-900 px-1.5 py-0.5 text-[10px] text-slate-400 border border-slate-800"
+                      className="rounded bg-zinc-800/80 px-1.5 py-0.5 text-[10px] text-zinc-400 border craft-border font-telemetry"
                     >
                       #{tag}
                     </span>
@@ -279,7 +256,7 @@ export const IntelDepotPanel: React.FC<IntelDepotPanelProps> = ({
                   href={item.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 transition-colors"
+                  className="flex items-center gap-1 text-[11px] font-medium text-zinc-300 hover:text-white transition-colors"
                 >
                   <span>فتح الرابط</span>
                   <ExternalLink className="h-3 w-3" />
@@ -289,10 +266,10 @@ export const IntelDepotPanel: React.FC<IntelDepotPanelProps> = ({
           ))
         ) : (
           <div className="flex flex-col items-center justify-center py-10 text-center">
-            <Bookmark className="h-8 w-8 text-slate-700 mb-2" />
-            <p className="text-xs text-slate-400 font-bold mb-1">لا توجد عناصر استخباراتية في هذا القسم</p>
-            <p className="text-[11px] text-slate-600 max-w-xs font-mono-hud">
-              // استخدم زر "حفظ رابط جديد" أو شارك المقطع مباشرة من هاتفك
+            <Bookmark className="h-7 w-7 text-zinc-700 mb-2" />
+            <p className="text-xs text-zinc-400 font-bold mb-1">لا توجد عناصر في هذا القسم</p>
+            <p className="text-[11px] text-zinc-600 max-w-xs font-telemetry">
+              // اضغط على "حفظ رابط جديد" لإيداع ريلزات الحلول أو الفيديوهات
             </p>
           </div>
         )}
@@ -300,56 +277,56 @@ export const IntelDepotPanel: React.FC<IntelDepotPanelProps> = ({
 
       {/* Add Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
           <form
             onSubmit={handleSubmit}
-            className="hud-panel w-full max-w-md rounded-xl border border-slate-800 p-5 shadow-2xl"
+            className="craft-surface-elevated w-full max-w-md rounded-2xl p-5 text-right shadow-2xl"
           >
-            <div className="flex items-center justify-between pb-2 mb-3 border-b border-slate-800">
-              <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
-                <Sparkles className="h-4 w-4 text-amber-400" />
-                <span>التقاط وتخزين رابط استخباراتي</span>
+            <div className="flex items-center justify-between pb-2 mb-3 border-b craft-border">
+              <h3 className="text-sm font-bold text-zinc-100 flex items-center gap-1.5">
+                <Sparkles className="h-4 w-4 text-zinc-300" />
+                <span>حفظ رابط استخباراتي جديد</span>
               </h3>
               <button
                 type="button"
                 onClick={() => setShowAddModal(false)}
-                className="text-xs text-slate-400 hover:text-white"
+                className="p-1 text-zinc-400 hover:text-white"
               >
-                ✕
+                <X className="h-4 w-4" />
               </button>
             </div>
 
             <div className="space-y-3 mb-4 text-xs">
               <div>
-                <label className="text-slate-400 block mb-1 font-medium">الرابط (URL) *</label>
+                <label className="text-zinc-400 block mb-1">الرابط (URL) *</label>
                 <input
                   type="url"
                   required
                   value={url}
                   onChange={(e) => handleUrlChange(e.target.value)}
-                  placeholder="https://www.instagram.com/reel/... أو https://youtube.com/..."
-                  className="w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-1.5 text-slate-100 outline-none focus:border-amber-500/50"
+                  placeholder="https://instagram.com/reel/... أو https://youtube.com/..."
+                  className="w-full rounded-lg border craft-border bg-black/60 px-3 py-1.5 text-zinc-100 outline-none focus:border-zinc-500"
                 />
               </div>
 
               <div>
-                <label className="text-slate-400 block mb-1 font-medium">عنوان المقطع / الفيديو</label>
+                <label className="text-zinc-400 block mb-1">عنوان المقطع / الفيديو</label>
                 <input
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="مثال: حل مشكلة الأمان في خوادم Node.js"
-                  className="w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-1.5 text-slate-100 outline-none focus:border-amber-500/50"
+                  placeholder="مثال: حل مشكلة الأداء في قواعد البيانات"
+                  className="w-full rounded-lg border craft-border bg-black/60 px-3 py-1.5 text-zinc-100 outline-none focus:border-zinc-500"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-slate-400 block mb-1 font-medium">التصنيف</label>
+                  <label className="text-zinc-400 block mb-1">التصنيف</label>
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value as any)}
-                    className="w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-1.5 text-slate-200 outline-none"
+                    className="w-full rounded-lg border craft-border bg-black/60 px-3 py-1.5 text-zinc-200 outline-none"
                   >
                     <option value="solution_reel">ريلز يتضمن حلاً</option>
                     <option value="watch_later">فيديو للمشاهدة لاحقاً</option>
@@ -358,11 +335,11 @@ export const IntelDepotPanel: React.FC<IntelDepotPanelProps> = ({
                 </div>
 
                 <div>
-                  <label className="text-slate-400 block mb-1 font-medium">المشروع ذو الصلة</label>
+                  <label className="text-zinc-400 block mb-1">المشروع ذو الصلة</label>
                   <select
                     value={selectedMissionId}
                     onChange={(e) => setSelectedMissionId(e.target.value)}
-                    className="w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-1.5 text-slate-200 outline-none"
+                    className="w-full rounded-lg border craft-border bg-black/60 px-3 py-1.5 text-zinc-200 outline-none"
                   >
                     <option value="">(عام - بدون مشروع محدد)</option>
                     {missions.map((m) => (
@@ -375,26 +352,26 @@ export const IntelDepotPanel: React.FC<IntelDepotPanelProps> = ({
               </div>
 
               <div>
-                <label className="text-amber-300 block mb-1 font-bold">
-                  ما هو الحل الذي يقدمه هذا المقطع؟ (مهم للبحث والاسترجاع)
+                <label className="text-zinc-200 block mb-1 font-bold">
+                  ما هو الحل الذي يقدمه هذا المقطع؟
                 </label>
                 <textarea
                   value={problemSolved}
                   onChange={(e) => setProblemSolved(e.target.value)}
-                  placeholder="مثال: طريقة عمل 캐시 لحظي للسيرفر لتقليل الضغط بنسبة 80%..."
-                  className="w-full rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-1.5 text-slate-100 outline-none resize-none"
+                  placeholder="مثال: طريقة عمل Caching لتقليل زمن الاستجابة إلى 20ms..."
+                  className="w-full rounded-lg border craft-border bg-black/60 px-3 py-1.5 text-zinc-100 outline-none resize-none leading-relaxed"
                   rows={2}
                 />
               </div>
 
               <div>
-                <label className="text-slate-400 block mb-1 font-medium">الوسوم (مفصولة بفواصل)</label>
+                <label className="text-zinc-400 block mb-1">الوسوم (مفصولة بفواصل)</label>
                 <input
                   type="text"
                   value={tagInput}
                   onChange={(e) => setTagInput(e.target.value)}
-                  placeholder="NexusOS, security, backend, database"
-                  className="w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-1.5 text-slate-200 outline-none focus:border-amber-500/50"
+                  placeholder="NexusOS, performance, security"
+                  className="w-full rounded-lg border craft-border bg-black/60 px-3 py-1.5 text-zinc-200 outline-none focus:border-zinc-500"
                 />
               </div>
             </div>
@@ -403,13 +380,13 @@ export const IntelDepotPanel: React.FC<IntelDepotPanelProps> = ({
               <button
                 type="button"
                 onClick={() => setShowAddModal(false)}
-                className="px-3 py-1.5 rounded-lg text-xs text-slate-400 hover:text-white"
+                className="px-3 py-1.5 rounded-lg text-xs text-zinc-400 hover:text-zinc-200"
               >
                 إلغاء
               </button>
               <button
                 type="submit"
-                className="px-4 py-1.5 rounded-lg bg-amber-500/20 border border-amber-500/40 text-xs font-bold text-amber-300 hover:bg-amber-500/30"
+                className="px-4 py-1.5 rounded-lg bg-zinc-100 text-zinc-950 font-bold hover:bg-white active:scale-95 text-xs transition-all shadow-sm"
               >
                 تخزين في الاستخبارات
               </button>

@@ -6,7 +6,8 @@ import type {
   StrategicDirective, 
   CommanderDossier, 
   BattleLog, 
-  ChatMessage 
+  ChatMessage,
+  CommanderMemory
 } from './types';
 import { HeaderHUD } from './components/HeaderHUD';
 import { SecurityLock } from './components/SecurityLock';
@@ -15,34 +16,31 @@ import { IntelDepotPanel } from './components/IntelDepotPanel';
 import { GraphifyRadarPanel } from './components/GraphifyRadarPanel';
 import { CommanderAIPanel } from './components/CommanderAIPanel';
 import { HandsFreeVoiceCall } from './components/HandsFreeVoiceCall';
+import { SettingsModal } from './components/SettingsModal';
 import { MobileNav } from './components/MobileNav';
 import { exportObsidianMarkdown, exportPureJSON } from './lib/exportMarkdown';
-import { tacticalAudio } from './lib/audio';
-import { Sparkles, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export function App() {
-  // Security State
   const [isLocked, setIsLocked] = useState(true);
-
-  // Layout State
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [activeLayout, setActiveLayout] = useState<'tri-panel' | 'focused'>('tri-panel');
   const [mobileTab, setMobileTab] = useState<'missions' | 'intel' | 'radar' | 'ai'>('ai');
   const [isVoiceCallOpen, setIsVoiceCallOpen] = useState(false);
-  const [showSITREPModal, setShowSITREPModal] = useState(false);
 
-  // Core Data States (Offline-First initial loading)
+  // Offline-First initial state loading
   const [missions, setMissions] = useState<Mission[]>(() => offlineStorage.get('missions', []));
   const [selectedMission, setSelectedMission] = useState<Mission | null>(null);
   const [intelItems, setIntelItems] = useState<IntelItem[]>(() => offlineStorage.get('intel', []));
   const [directives, setDirectives] = useState<StrategicDirective[]>(() => offlineStorage.get('directives', []));
   const [dossier, setDossier] = useState<CommanderDossier | null>(() => offlineStorage.get('dossier', null));
+  const [memories, setMemories] = useState<CommanderMemory[]>(() => offlineStorage.get('memories', []));
   const [battleLogs, setBattleLogs] = useState<BattleLog[]>(() => offlineStorage.get('logs', []));
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(() => 
     offlineStorage.get('chat', [
       {
         id: 'welcome-msg',
         role: 'assistant',
-        content: 'مرحباً بك في غرفة العمليات المركزية «عقلية»، يا قائد. أنا مستشارك ورفيق رحلتك التكتيكية. مشروع NexusOS وبنك الاستخبارات ورادار الأفكار جاهزة بالكامل وتحت إمرتك. كيف نبدأ معركة اليوم؟',
+        content: 'أهلاً بك في غرفة العمليات المركزية «عقلية»، يا قائد محمد. مستشارك التكتيكي جاهز ومتصل بمحرك Google Gemini فائق السرعة، ومربوط بسجل ذكرياتك ومشروع NexusOS وبنك الاستخبارات. كيف نتحرك اليوم؟',
         created_at: new Date().toISOString(),
       }
     ])
@@ -50,7 +48,6 @@ export function App() {
 
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
-  // Monitor Network
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
@@ -62,53 +59,58 @@ export function App() {
     };
   }, []);
 
-  // Fetch Live Data from Supabase & Subscribe Realtime
+  // Fetch from Supabase
   useEffect(() => {
     async function loadData() {
       try {
-        const [mRes, iRes, dRes, dosRes, logRes] = await Promise.all([
+        const [mRes, iRes, dRes, dosRes, memRes, logRes] = await Promise.all([
           supabase.from('missions').select('*').order('created_at', { ascending: false }),
           supabase.from('intel_depot').select('*').order('created_at', { ascending: false }),
           supabase.from('strategic_directives').select('*'),
           supabase.from('commander_dossier').select('*').single(),
+          supabase.from('commander_memories').select('*').order('importance', { ascending: false }),
           supabase.from('battle_logs').select('*').order('created_at', { ascending: false }).limit(30),
         ]);
 
         if (mRes.data && mRes.data.length > 0) {
-          setMissions(mRes.data);
+          setMissions(mRes.data as Mission[]);
           offlineStorage.save('missions', mRes.data);
-          setSelectedMission(mRes.data[0]);
+          setSelectedMission(mRes.data[0] as Mission);
         }
         if (iRes.data) {
-          setIntelItems(iRes.data);
+          setIntelItems(iRes.data as IntelItem[]);
           offlineStorage.save('intel', iRes.data);
         }
         if (dRes.data) {
-          setDirectives(dRes.data);
+          setDirectives(dRes.data as StrategicDirective[]);
           offlineStorage.save('directives', dRes.data);
         }
         if (dosRes.data) {
-          setDossier(dosRes.data);
+          setDossier(dosRes.data as CommanderDossier);
           offlineStorage.save('dossier', dosRes.data);
         }
+        if (memRes.data) {
+          setMemories(memRes.data as CommanderMemory[]);
+          offlineStorage.save('memories', memRes.data);
+        }
         if (logRes.data) {
-          setBattleLogs(logRes.data);
+          setBattleLogs(logRes.data as BattleLog[]);
           offlineStorage.save('logs', logRes.data);
         }
       } catch (err) {
-        console.warn('Using offline data cache', err);
+        console.warn('Using local cache', err);
       }
     }
 
     loadData();
 
-    // Subscribe to Realtime WebSocket changes
+    // Supabase Realtime channel
     const channel = supabase
       .channel('aqliya-realtime-hub')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'missions' }, (payload) => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'missions' }, () => {
         loadData();
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'intel_depot' }, (payload) => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'intel_depot' }, () => {
         loadData();
       })
       .subscribe();
@@ -118,9 +120,7 @@ export function App() {
     };
   }, []);
 
-  // Handlers
   const handleUpdateMission = async (updated: Partial<Mission> & { id: string }) => {
-    // Optimistic UI Update
     setMissions((prev) =>
       prev.map((m) => (m.id === updated.id ? { ...m, ...updated, updated_at: new Date().toISOString() } : m))
     );
@@ -129,7 +129,7 @@ export function App() {
     }
 
     try {
-      await supabase.from('missions').update(updated).eq('id', updated.id);
+      await (supabase.from('missions') as any).update(updated).eq('id', updated.id);
     } catch (e) {
       offlineStorage.queueSyncAction({ table: 'missions', type: 'update', data: updated });
     }
@@ -148,10 +148,10 @@ export function App() {
     };
 
     try {
-      const { data } = await supabase.from('missions').insert(newMission).select().single();
+      const { data } = await (supabase.from('missions') as any).insert(newMission).select().single();
       if (data) {
-        setMissions((prev) => [data, ...prev]);
-        setSelectedMission(data);
+        setMissions((prev) => [data as Mission, ...prev]);
+        setSelectedMission(data as Mission);
       }
     } catch (e) {
       offlineStorage.queueSyncAction({ table: 'missions', type: 'insert', data: newMission });
@@ -160,9 +160,9 @@ export function App() {
 
   const handleAddIntelItem = async (item: Omit<IntelItem, 'id' | 'created_at' | 'updated_at'>) => {
     try {
-      const { data } = await supabase.from('intel_depot').insert(item).select().single();
+      const { data } = await (supabase.from('intel_depot') as any).insert(item).select().single();
       if (data) {
-        setIntelItems((prev) => [data, ...prev]);
+        setIntelItems((prev) => [data as IntelItem, ...prev]);
       }
     } catch (e) {
       offlineStorage.queueSyncAction({ table: 'intel_depot', type: 'insert', data: item });
@@ -172,65 +172,23 @@ export function App() {
   const handleUpdateIntelStatus = async (id: string, status: IntelItem['status']) => {
     setIntelItems((prev) => prev.map((i) => (i.id === id ? { ...i, status } : i)));
     try {
-      await supabase.from('intel_depot').update({ status }).eq('id', id);
+      await (supabase.from('intel_depot') as any).update({ status }).eq('id', id);
     } catch (e) {
       offlineStorage.queueSyncAction({ table: 'intel_depot', type: 'update', data: { id, status } });
     }
   };
 
-  const handleSendMessage = async (content: string) => {
-    const userMsg: ChatMessage = {
-      id: `user-${Date.now()}`,
-      role: 'user',
-      content,
-      created_at: new Date().toISOString(),
-    };
-
-    const updated = [...chatMessages, userMsg];
+  const handleAddChatMessage = (msg: ChatMessage) => {
+    const updated = [...chatMessages, msg];
     setChatMessages(updated);
     offlineStorage.save('chat', updated);
-
-    // AI Contextual Tactical Response
-    setTimeout(() => {
-      let replyContent = `علم يا قائد. بخصوص "${content.slice(0, 35)}..."، تم استحضار المعطيات وربطها بهدفك الاستراتيجي.`;
-      const c = content.toLowerCase();
-
-      if (c.includes('nexus') || c.includes('مشروع')) {
-        const nexus = missions.find((m) => m.code.includes('NEXUS')) || missions[0];
-        replyContent = `مشروع [${nexus?.title || 'NexusOS'}] تقدمه حالياً ${nexus?.progress_percent || 25}%.\n\n• التركيز الحالي: ${nexus?.current_focus || 'تطوير المعمارية'}\n• الخطوة القادمة: ${nexus?.next_ops || 'ربط المستودع'}\n\nجاهز لمساعدتك في صياغة الخطوة القادمة فوراً.`;
-      } else if (c.includes('sitrep') || c.includes('صباح') || c.includes('موجز')) {
-        replyContent = `📊 **موجز الموقف التكتيكي (SITREP):**\n\n1. المهمة المحورية: **NexusOS Core** (${missions[0]?.progress_percent || 25}%)\n2. بنك الاستخبارات: **${intelItems.length}** روابط وحلول مسجلة.\n3. أولوية اليوم: التركيز على ${missions[0]?.current_focus || 'بناء المقر'}.\n\nأنت القائد، والهدف واضح. بالتوفيق!`;
-      } else if (c.includes('حل') || c.includes('ريلز')) {
-        const topSolutions = intelItems.filter((i) => i.problem_solved).slice(0, 2);
-        if (topSolutions.length > 0) {
-          replyContent = `💡 **أبرز الحلول المسجلة في بنكك الاستخباراتي:**\n\n${topSolutions
-            .map((s) => `• **${s.title}**: ${s.problem_solved}`)
-            .join('\n\n')}\n\nيمكنك استعراض المزيد في تبويب الاستخبارات.`;
-        } else {
-          replyContent = 'بنك الاستخبارات جاهز. يمكنك مشاركة أي ريلز أو فيديو لحفظه وتوثيق الحل المستفاد منه فوراً.';
-        }
-      }
-
-      const aiMsg: ChatMessage = {
-        id: `ai-${Date.now()}`,
-        role: 'assistant',
-        content: replyContent,
-        created_at: new Date().toISOString(),
-      };
-
-      setChatMessages((prev) => {
-        const next = [...prev, aiMsg];
-        offlineStorage.save('chat', next);
-        return next;
-      });
-    }, 700);
   };
 
   const handleVoiceTranscript = (speech: string, reply: string) => {
     const userMsg: ChatMessage = {
       id: `voice-user-${Date.now()}`,
       role: 'user',
-      content: `🎙️ [رسالة صوتية مباشرة]: ${speech}`,
+      content: `🎙️ [رسالة صوتية]: ${speech}`,
       created_at: new Date().toISOString(),
     };
     const aiMsg: ChatMessage = {
@@ -249,14 +207,18 @@ export function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#08090d] text-slate-100 flex flex-col font-sans selection:bg-emerald-500/30">
-      {/* Tactical Top Header */}
+    <div className="min-h-screen bg-[#09090b] text-zinc-100 flex flex-col font-sans selection:bg-zinc-800">
+      {/* Header HUD */}
       <HeaderHUD
         onLock={() => setIsLocked(true)}
         onOpenVoiceCall={() => setIsVoiceCallOpen(true)}
         onTriggerSITREP={() => {
-          setShowSITREPModal(true);
-          handleSendMessage('أعطني موجز الموقف الصباحي SITREP وأولويات اليوم');
+          handleAddChatMessage({
+            id: `sitrep-${Date.now()}`,
+            role: 'assistant',
+            content: `📊 **موجز الموقف التكتيكي (SITREP):**\n\n1. المهمة المحورية: **NexusOS Core** (${missions[0]?.progress_percent || 25}%)\n2. بنك الاستخبارات: **${intelItems.length}** روابط وحلول مسجلة.\n3. أولوية اليوم: التركيز على ${missions[0]?.current_focus || 'بناء المقر'}.\n\nأنت القائد، والهدف واضح. بالتوفيق!`,
+            created_at: new Date().toISOString(),
+          });
         }}
         onExportMarkdown={() =>
           exportObsidianMarkdown({
@@ -264,18 +226,10 @@ export function App() {
             directives,
             intel: intelItems,
             logs: battleLogs,
-            memories: [],
+            memories,
           })
         }
-        onExportJSON={() =>
-          exportPureJSON({
-            missions,
-            directives,
-            intel: intelItems,
-            logs: battleLogs,
-            dossier,
-          })
-        }
+        onOpenSettings={() => setIsSettingsOpen(true)}
         isOnline={isOnline}
         activeLayout={activeLayout}
         onToggleLayout={() =>
@@ -283,11 +237,11 @@ export function App() {
         }
       />
 
-      {/* Main Operational War Room Area */}
-      <main className="flex-1 p-3 md:p-4 pb-20 lg:pb-4 overflow-hidden">
-        {/* Desktop View: Tri-Panel Draggable Grid */}
+      {/* Main Command Center Deck */}
+      <main className="flex-1 p-3 md:p-4 pb-20 lg:pb-4 overflow-hidden max-w-[1700px] w-full mx-auto">
+        {/* Desktop View */}
         <div className="hidden lg:grid grid-cols-12 gap-4 h-[calc(100vh-80px)]">
-          {/* Left Panel: Missions & NexusOS Telemetry (4 cols) */}
+          {/* Left Panel: Missions & NexusOS */}
           <div className="col-span-4 h-full">
             <MissionsPanel
               missions={missions}
@@ -298,7 +252,7 @@ export function App() {
             />
           </div>
 
-          {/* Center Panel: Intel Depot & Graphify Radar Toggle (4 cols) */}
+          {/* Center Panel: Intel Depot & Graphify Radar */}
           <div className="col-span-4 h-full flex flex-col gap-4">
             <div className="flex-1 min-h-[50%]">
               <IntelDepotPanel
@@ -314,26 +268,33 @@ export function App() {
                 intel={intelItems}
                 directives={directives}
                 onTriggerGraphifyScan={() => {
-                  handleSendMessage('أريد مسح وتحديث شبكة الأفكار ورادار Graphify للمشاريع');
+                  handleAddChatMessage({
+                    id: `scan-${Date.now()}`,
+                    role: 'assistant',
+                    content: 'تم تحديث رادار الأفكار المعرفي عبر محرك Graphify، وربط كافة العقد بالمشاريع والاستراتيجيات بنجاح.',
+                    created_at: new Date().toISOString(),
+                  });
                 }}
               />
             </div>
           </div>
 
-          {/* Right Panel: Commander AI Companion & Chief of Staff (4 cols) */}
+          {/* Right Panel: Commander AI with Gemini 1.5 Flash */}
           <div className="col-span-4 h-full">
             <CommanderAIPanel
               messages={chatMessages}
               missions={missions}
               intel={intelItems}
               dossier={dossier}
-              onSendMessage={handleSendMessage}
+              memories={memories}
+              onSendMessage={handleAddChatMessage}
               onOpenVoiceCall={() => setIsVoiceCallOpen(true)}
+              onOpenSettings={() => setIsSettingsOpen(true)}
             />
           </div>
         </div>
 
-        {/* Mobile View: Priority Tabs with Quick Switcher */}
+        {/* Mobile View */}
         <div className="lg:hidden h-[calc(100vh-140px)]">
           {mobileTab === 'missions' && (
             <MissionsPanel
@@ -359,9 +320,7 @@ export function App() {
               missions={missions}
               intel={intelItems}
               directives={directives}
-              onTriggerGraphifyScan={() => {
-                handleSendMessage('مسح وتحديث شبكة Graphify');
-              }}
+              onTriggerGraphifyScan={() => {}}
             />
           )}
 
@@ -371,27 +330,33 @@ export function App() {
               missions={missions}
               intel={intelItems}
               dossier={dossier}
-              onSendMessage={handleSendMessage}
+              memories={memories}
+              onSendMessage={handleAddChatMessage}
               onOpenVoiceCall={() => setIsVoiceCallOpen(true)}
+              onOpenSettings={() => setIsSettingsOpen(true)}
             />
           )}
         </div>
       </main>
 
-      {/* Hands-Free Live Voice Call Modal */}
+      {/* Hands-Free Voice Call */}
       <HandsFreeVoiceCall
         isOpen={isVoiceCallOpen}
         onClose={() => setIsVoiceCallOpen(false)}
         onTranscriptReceived={handleVoiceTranscript}
       />
 
-      {/* Mobile Bottom Navigation Bar with Priority Chat Access */}
+      {/* Settings Modal (Gemini API & Security) */}
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+      />
+
+      {/* Mobile Navigation */}
       <MobileNav
         activeTab={mobileTab}
         onSelectTab={setMobileTab}
-        onQuickCapture={() => {
-          setMobileTab('intel');
-        }}
+        onQuickCapture={() => setMobileTab('intel')}
         onOpenVoiceCall={() => setIsVoiceCallOpen(true)}
       />
     </div>

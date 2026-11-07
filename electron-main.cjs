@@ -1,42 +1,60 @@
 const { app, BrowserWindow } = require('electron');
 const path = require('path');
 
+// Disable hardware acceleration issues on some Windows drivers for instant startup
+app.commandLine.appendSwitch('disable-software-rasterizer');
+app.commandLine.appendSwitch('disable-gpu-sandbox');
+
+let mainWindow = null;
+
 function createWindow() {
-  const win = new BrowserWindow({
-    width: 1400,
-    height: 900,
-    minWidth: 1000,
-    minHeight: 650,
-    title: 'عقلية | AQLIYA HQ — غرفة العمليات التكتيكية',
-    backgroundColor: '#08090d',
+  mainWindow = new BrowserWindow({
+    width: 1440,
+    height: 920,
+    minWidth: 1024,
+    minHeight: 700,
+    title: 'عقلية | AQLIYA HQ',
+    backgroundColor: '#09090b',
     show: false,
     autoHideMenuBar: true,
+    frame: true,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
+      spellcheck: false,
     },
   });
 
-  // Load the production build directly from disk - NO LOCALHOST AT ALL!
   const indexPath = path.join(__dirname, 'dist', 'index.html');
-  win.loadFile(indexPath);
+  mainWindow.loadFile(indexPath);
 
-  win.once('ready-to-show', () => {
-    win.show();
-    win.focus();
+  mainWindow.once('ready-to-show', () => {
+    mainWindow.show();
+    mainWindow.focus();
+  });
+
+  mainWindow.on('closed', () => {
+    mainWindow = null;
   });
 }
 
-app.whenReady().then(createWindow);
+// Single instance lock for fast response
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+    }
+  });
+
+  app.whenReady().then(createWindow);
+}
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
-  }
-});
-
-app.on('activate', () => {
-  if (BrowserWindow.getAllWindows().length === 0) {
-    createWindow();
   }
 });

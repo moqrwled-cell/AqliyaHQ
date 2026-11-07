@@ -5,23 +5,26 @@ import {
   Mic, 
   MicOff, 
   Sparkles, 
-  Terminal, 
-  ShieldAlert, 
-  CheckCircle, 
-  RefreshCw,
-  PhoneCall,
-  Volume2
+  PhoneCall, 
+  Volume2, 
+  Settings,
+  Circle,
+  Copy,
+  Check
 } from 'lucide-react';
-import type { ChatMessage, Mission, IntelItem, CommanderDossier } from '../types';
+import type { ChatMessage, Mission, IntelItem, CommanderDossier, CommanderMemory } from '../types';
 import { tacticalAudio } from '../lib/audio';
+import { askCommanderAI, geminiConfig } from '../lib/gemini';
 
 interface CommanderAIPanelProps {
   messages: ChatMessage[];
   missions: Mission[];
   intel: IntelItem[];
   dossier: CommanderDossier | null;
-  onSendMessage: (content: string) => void;
+  memories: CommanderMemory[];
+  onSendMessage: (msg: ChatMessage) => void;
   onOpenVoiceCall: () => void;
+  onOpenSettings: () => void;
 }
 
 export const CommanderAIPanel: React.FC<CommanderAIPanelProps> = ({
@@ -29,52 +32,86 @@ export const CommanderAIPanel: React.FC<CommanderAIPanelProps> = ({
   missions,
   intel,
   dossier,
+  memories,
   onSendMessage,
   onOpenVoiceCall,
+  onOpenSettings,
 }) => {
   const [inputText, setInputText] = useState('');
   const [isRecording, setIsRecording] = useState(false);
-  const [isTyping, setIsTyping] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const hasApiKey = geminiConfig.hasApiKey();
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isTyping]);
+  }, [messages, isGenerating]);
 
-  const handleSend = () => {
-    if (!inputText.trim()) return;
-    tacticalAudio.playConfirm();
-    const text = inputText.trim();
+  const handleSend = async () => {
+    if (!inputText.trim() || isGenerating) return;
+    const userText = inputText.trim();
     setInputText('');
-    onSendMessage(text);
+    tacticalAudio.playConfirm();
 
-    // AI tactical response generation
-    setIsTyping(true);
-    setTimeout(() => {
-      setIsTyping(false);
+    // Add user message
+    const userMsg: ChatMessage = {
+      id: `user-${Date.now()}`,
+      role: 'user',
+      content: userText,
+      created_at: new Date().toISOString(),
+    };
+    onSendMessage(userMsg);
+
+    // Call real Gemini API
+    setIsGenerating(true);
+    try {
+      const reply = await askCommanderAI(userText, {
+        dossier,
+        missions,
+        intel,
+        memories,
+      });
+
+      const aiMsg: ChatMessage = {
+        id: `ai-${Date.now()}`,
+        role: 'assistant',
+        content: reply,
+        created_at: new Date().toISOString(),
+      };
+      onSendMessage(aiMsg);
       tacticalAudio.playBlip();
-    }, 1000);
+    } catch (e: any) {
+      const errMsg: ChatMessage = {
+        id: `err-${Date.now()}`,
+        role: 'assistant',
+        content: `تعذر إكمال الاستشارة: ${e?.message || 'خطأ غير معروف'}`,
+        created_at: new Date().toISOString(),
+      };
+      onSendMessage(errMsg);
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
-  const handleVoiceNoteToggle = () => {
+  const handleVoiceToggle = () => {
     if (!isRecording) {
       tacticalAudio.playAlert();
       setIsRecording(true);
-      // Web Speech Recognition if available
       if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
         const SpeechRec = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-        const recognition = new SpeechRec();
-        recognition.lang = 'ar-SA';
-        recognition.continuous = false;
-        recognition.onresult = (event: any) => {
-          const transcript = event.results[0][0].transcript;
+        const rec = new SpeechRec();
+        rec.lang = 'ar-SA';
+        rec.onresult = (e: any) => {
+          const transcript = e.results[0][0].transcript;
           setInputText((prev) => (prev ? prev + ' ' + transcript : transcript));
           setIsRecording(false);
           tacticalAudio.playConfirm();
         };
-        recognition.onerror = () => setIsRecording(false);
-        recognition.onend = () => setIsRecording(false);
-        recognition.start();
+        rec.onerror = () => setIsRecording(false);
+        rec.onend = () => setIsRecording(false);
+        rec.start();
       } else {
         setTimeout(() => setIsRecording(false), 2000);
       }
@@ -84,67 +121,80 @@ export const CommanderAIPanel: React.FC<CommanderAIPanelProps> = ({
     }
   };
 
-  const executeQuickAction = (prompt: string) => {
-    tacticalAudio.playBlip();
-    setInputText(prompt);
+  const handleCopy = (id: string, text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 1500);
   };
 
   return (
-    <div className="flex flex-col h-full hud-panel rounded-xl border border-slate-800 p-4 overflow-hidden">
+    <div className="flex flex-col h-full craft-surface rounded-2xl p-4 overflow-hidden text-right">
       {/* Header */}
-      <div className="flex items-center justify-between pb-3 border-b border-slate-800/80 mb-3">
-        <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
+      <div className="flex items-center justify-between pb-3 border-b craft-border mb-3">
+        <div className="flex items-center gap-2.5">
+          <div className="p-2 rounded-xl bg-zinc-800/80 border craft-border text-zinc-200">
             <Bot className="h-4 w-4" />
           </div>
           <div>
-            <h2 className="text-sm font-bold text-white flex items-center gap-1.5">
-              <span>المستشار الذكي (رفيق الرحلة)</span>
-              <span className="text-[10px] font-mono-hud text-cyan-400">// CHIEF OF STAFF</span>
-            </h2>
-            <p className="text-[11px] text-slate-400">ذاكرة دائمة • مستشار للقرارات والمشاريع</p>
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-bold text-zinc-100">مستشار العمليات</h2>
+              <span className="text-[10px] font-telemetry px-1.5 py-0.5 rounded bg-zinc-800/80 border craft-border text-zinc-400">
+                AI COPILOT
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 text-[11px] font-telemetry text-zinc-400 mt-0.5">
+              <Circle className={`h-1.5 w-1.5 fill-current ${hasApiKey ? 'text-emerald-500' : 'text-amber-500'}`} />
+              <span>{hasApiKey ? 'GEMINI 1.5 FLASH • LIVE' : 'API KEY REQUIRED'}</span>
+            </div>
           </div>
         </div>
 
-        {/* Live Call Button */}
-        <button
-          onClick={() => {
-            tacticalAudio.playConfirm();
-            onOpenVoiceCall();
-          }}
-          className="flex items-center gap-1.5 text-xs font-semibold text-cyan-300 bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/40 px-2.5 py-1 rounded-lg transition-all active:scale-95 glow-cyan"
-          title="بدء مكالمة صوتية حية بدون لمس"
-        >
-          <PhoneCall className="h-3.5 w-3.5 text-cyan-400 animate-pulse" />
-          <span className="hidden sm:inline">مكالمة العمليات</span>
-        </button>
+        <div className="flex items-center gap-1.5">
+          {/* Hands-Free Voice Call */}
+          <button
+            onClick={() => {
+              tacticalAudio.playConfirm();
+              onOpenVoiceCall();
+            }}
+            className="flex items-center gap-1.5 text-xs font-semibold text-cyan-300 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 px-2.5 py-1.5 rounded-lg transition-all active:scale-95"
+            title="مكالمة صوتية حية بدون لمس"
+          >
+            <PhoneCall className="h-3.5 w-3.5 text-cyan-400" />
+            <span className="hidden sm:inline">اتصال صوتي</span>
+          </button>
+
+          {!hasApiKey && (
+            <button
+              onClick={onOpenSettings}
+              className="p-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 hover:bg-amber-500/20 transition-all text-xs flex items-center gap-1"
+              title="أدخل مفتاح Google Gemini API"
+            >
+              <Settings className="h-3.5 w-3.5" />
+              <span className="text-[10px]">تفعيل الذكاء</span>
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Quick Action Chips */}
-      <div className="flex gap-1.5 pb-2.5 overflow-x-auto scrollbar-none mb-2 border-b border-slate-800/40">
+      {/* Quick Prompts Bar */}
+      <div className="flex gap-1.5 pb-2.5 overflow-x-auto scrollbar-none mb-2 border-b craft-border">
         <button
-          onClick={() => executeQuickAction('أعطني موجز الموقف الصباحي SITREP وأولويات اليوم')}
-          className="px-2.5 py-1 rounded-md bg-slate-900/80 border border-slate-800 text-[11px] text-slate-300 hover:text-white whitespace-nowrap hover:border-amber-500/40 active:scale-95 transition-all"
+          onClick={() => setInputText('أعطني موجز الموقف الصباحي SITREP وأولويات اليوم')}
+          className="px-2.5 py-1 rounded-md bg-zinc-900 border craft-border text-[11px] text-zinc-300 hover:text-white whitespace-nowrap hover:bg-zinc-800 transition-all"
         >
           ✨ موجز SITREP
         </button>
         <button
-          onClick={() => executeQuickAction('ما هو الموقف الحالي لمشروع NexusOS وما الخطوة القادمة؟')}
-          className="px-2.5 py-1 rounded-md bg-slate-900/80 border border-slate-800 text-[11px] text-slate-300 hover:text-white whitespace-nowrap hover:border-cyan-500/40 active:scale-95 transition-all"
+          onClick={() => setInputText('ما هو الموقف الحالي لمشروع NexusOS وما الخطوة القادمة؟')}
+          className="px-2.5 py-1 rounded-md bg-zinc-900 border craft-border text-[11px] text-zinc-300 hover:text-white whitespace-nowrap hover:bg-zinc-800 transition-all"
         >
           🎯 تحليل NexusOS
         </button>
         <button
-          onClick={() => executeQuickAction('استعرض لي أفضل الحلول المخزنة في بنك الاستخبارات')}
-          className="px-2.5 py-1 rounded-md bg-slate-900/80 border border-slate-800 text-[11px] text-slate-300 hover:text-white whitespace-nowrap hover:border-emerald-500/40 active:scale-95 transition-all"
+          onClick={() => setInputText('استعرض لي أفضل الحلول المخزنة في بنك الاستخبارات للربط مع مشروعنا')}
+          className="px-2.5 py-1 rounded-md bg-zinc-900 border craft-border text-[11px] text-zinc-300 hover:text-white whitespace-nowrap hover:bg-zinc-800 transition-all"
         >
           💡 حلول الاستخبارات
-        </button>
-        <button
-          onClick={() => executeQuickAction('سجل عندك إنجازاً جديداً نفذته اليوم')}
-          className="px-2.5 py-1 rounded-md bg-slate-900/80 border border-slate-800 text-[11px] text-slate-300 hover:text-white whitespace-nowrap hover:border-purple-500/40 active:scale-95 transition-all"
-        >
-          ⚔️ توثيق معركة
         </button>
       </div>
 
@@ -157,53 +207,71 @@ export const CommanderAIPanel: React.FC<CommanderAIPanelProps> = ({
               msg.role === 'user' ? 'items-start pl-6' : 'items-end pr-2'
             }`}
           >
-            <div className="flex items-center gap-1.5 mb-1 text-[10px] font-mono-hud text-slate-500">
-              <span>{msg.role === 'user' ? 'الـقـائـد' : 'مستشار العمليات'}</span>
+            <div className="flex items-center gap-1.5 mb-1 text-[10px] font-telemetry text-zinc-500">
+              <span>{msg.role === 'user' ? 'الـقـائـد' : 'مستشار العمليات (Gemini)'}</span>
               <span>•</span>
-              <span>{new Date(msg.created_at).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}</span>
+              <span>{new Date(msg.created_at || Date.now()).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}</span>
             </div>
 
             <div
-              className={`rounded-xl p-3 leading-relaxed max-w-[92%] relative ${
+              className={`rounded-xl p-3 leading-relaxed max-w-[92%] relative border ${
                 msg.role === 'user'
-                  ? 'bg-emerald-950/40 border border-emerald-500/30 text-emerald-100'
-                  : 'bg-slate-900/90 border border-slate-800 text-slate-200'
+                  ? 'bg-zinc-800/90 border-zinc-700/80 text-zinc-100 shadow-sm'
+                  : 'bg-zinc-900/90 craft-border text-zinc-200'
               }`}
             >
               <div className="whitespace-pre-wrap">{msg.content}</div>
 
               {msg.role === 'assistant' && (
-                <button
-                  onClick={() => tacticalAudio.speakTactical(msg.content)}
-                  className="mt-2 flex items-center gap-1 text-[10px] text-cyan-400 hover:text-cyan-300 pt-1 border-t border-slate-800/60"
-                  title="استماع صوتي"
-                >
-                  <Volume2 className="h-3 w-3" />
-                  <span>قراءة صوتية</span>
-                </button>
+                <div className="mt-2.5 pt-2 border-t craft-border flex items-center justify-between text-[11px] text-zinc-400">
+                  <button
+                    onClick={() => tacticalAudio.speakTactical(msg.content)}
+                    className="flex items-center gap-1 hover:text-zinc-200 transition-colors"
+                  >
+                    <Volume2 className="h-3 w-3" />
+                    <span>استماع صوتي</span>
+                  </button>
+
+                  <button
+                    onClick={() => handleCopy(msg.id, msg.content)}
+                    className="flex items-center gap-1 hover:text-zinc-200 transition-colors"
+                  >
+                    {copiedId === msg.id ? (
+                      <>
+                        <Check className="h-3 w-3 text-emerald-400" />
+                        <span>تم النسخ</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="h-3 w-3" />
+                        <span>نسخ</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               )}
             </div>
           </div>
         ))}
 
-        {isTyping && (
-          <div className="flex items-center gap-2 text-cyan-400 text-xs font-mono-hud">
+        {isGenerating && (
+          <div className="flex items-center gap-2 text-cyan-400 text-xs font-telemetry py-2">
             <Sparkles className="h-3.5 w-3.5 animate-spin" />
-            <span>المستشار يستحضر الذاكرة ويحلل البيانات...</span>
+            <span>المستشار يستحضر السياق ويحلل البيانات عبر Gemini...</span>
           </div>
         )}
 
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Bar */}
-      <div className="flex items-center gap-2 pt-2 border-t border-slate-800/80">
+      {/* Input Composer */}
+      <div className="flex items-center gap-2 pt-2 border-t craft-border">
         <button
-          onClick={handleVoiceNoteToggle}
-          className={`p-2 rounded-lg border transition-all active:scale-95 ${
+          onClick={handleVoiceToggle}
+          className={`p-2 rounded-xl border transition-all active:scale-95 ${
             isRecording
               ? 'bg-red-500/20 border-red-500 text-red-400 animate-pulse'
-              : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+              : 'bg-zinc-900 craft-border text-zinc-400 hover:text-white'
           }`}
           title="تسجيل صوتي فوري"
         >
@@ -215,13 +283,14 @@ export const CommanderAIPanel: React.FC<CommanderAIPanelProps> = ({
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-          placeholder="ناقش المستشار أو أصدر توجيهاً لمشاريعك..."
-          className="flex-1 rounded-lg border border-slate-800 bg-slate-950/90 px-3 py-2 text-xs text-slate-100 placeholder:text-slate-600 outline-none focus:border-cyan-500/50"
+          placeholder="تحدث مع المستشار أو أصدر توجيهاً تكتيكياً..."
+          className="flex-1 rounded-xl border craft-border bg-black/60 px-3.5 py-2 text-xs text-zinc-100 placeholder:text-zinc-500 outline-none focus:border-zinc-500 transition-colors"
         />
 
         <button
           onClick={handleSend}
-          className="p-2 rounded-lg bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/30 active:scale-95 transition-all"
+          disabled={isGenerating || !inputText.trim()}
+          className="p-2 rounded-xl bg-zinc-100 text-zinc-950 font-bold hover:bg-white active:scale-95 disabled:opacity-40 disabled:pointer-events-none transition-all shadow-sm"
         >
           <Send className="h-4 w-4" />
         </button>

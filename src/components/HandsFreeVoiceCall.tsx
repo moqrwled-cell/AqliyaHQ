@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { PhoneOff, Mic, Volume2, Sparkles, Radio, Shield } from 'lucide-react';
+import { PhoneOff, Mic, Volume2, Radio } from 'lucide-react';
 import { tacticalAudio } from '../lib/audio';
 
 interface HandsFreeVoiceCallProps {
@@ -15,7 +15,7 @@ export const HandsFreeVoiceCall: React.FC<HandsFreeVoiceCallProps> = ({
 }) => {
   const [callStatus, setCallStatus] = useState<'connecting' | 'active' | 'listening' | 'speaking'>('connecting');
   const [liveUserSpeech, setLiveUserSpeech] = useState('');
-  const [liveAIReply, setLiveAIReply] = useState('أهلاً بك يا قائد. الخط مفتوح ومؤمن تماماً، أنا أسمعك بكل وضوح...');
+  const [liveAIReply, setLiveAIReply] = useState('أهلاً بك يا قائد. خط العمليات المباشر مفتوح ومؤمن تماماً، أنا أسمعك بكل وضوح...');
   const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
@@ -30,12 +30,11 @@ export const HandsFreeVoiceCall: React.FC<HandsFreeVoiceCallProps> = ({
     tacticalAudio.playConfirm();
     setCallStatus('connecting');
 
-    // Simulate connection delay then start hands-free voice loop
     const timer = setTimeout(() => {
       setCallStatus('active');
       tacticalAudio.speakTactical('أهلاً بك يا قائد. خط العمليات المباشر مفتوح، تفضل بالحديث...');
       startContinuousListening();
-    }, 1200);
+    }, 1000);
 
     return () => {
       clearTimeout(timer);
@@ -81,7 +80,6 @@ export const HandsFreeVoiceCall: React.FC<HandsFreeVoiceCallProps> = ({
       };
 
       rec.onerror = () => {
-        // Auto restart on error for hands-free durability
         setTimeout(() => {
           if (isOpen) {
             try {
@@ -92,7 +90,6 @@ export const HandsFreeVoiceCall: React.FC<HandsFreeVoiceCallProps> = ({
       };
 
       rec.onend = () => {
-        // Auto restart if call is still active
         if (isOpen) {
           try {
             rec.start();
@@ -111,13 +108,12 @@ export const HandsFreeVoiceCall: React.FC<HandsFreeVoiceCallProps> = ({
     setCallStatus('speaking');
     tacticalAudio.playBlip();
 
-    // Contextual Tactical Speech Response
-    let reply = `علم، يا قائد. استمعت إليك بخصوص "${speech.slice(0, 30)}...". تم تسجيل الفكرة وربطها بالموقف التكتيكي لمشروع NexusOS. كيف تود توجيه الخطوة القادمة؟`;
+    let reply = `علم يا قائد. استمعت لتوجيهك بخصوص "${speech.slice(0, 30)}...". تم تسجيل الفكرة وربطها بالموقف التكتيكي لمشروع NexusOS. كيف تود توجيه الخطوة القادمة؟`;
 
     if (speech.includes('nexus') || speech.includes('مشروع')) {
-      reply = 'مشروع NexusOS حالياً في حالة تركيز كاملة على المعمارية المركزية. سجلت توجيهك وسأقوم بتحديث مؤشر الإنجاز فوراً.';
+      reply = 'مشروع NexusOS حالياً في حالة تركيز كاملة على المعمارية والربط السحابي. سجلت توجيهك وسأقوم بتحديث مؤشر الإنجاز فوراً.';
     } else if (speech.includes('حل') || speech.includes('ريلز')) {
-      reply = 'لديك حلول تقنية مسجلة في بنك الاستخبارات تتطابق مع ما ذكرته، أقترح استعراض ريلز الأمان لتسريع الإنجاز.';
+      reply = 'لديك حلول تقنية مسجلة في بنك الاستخبارات تتطابق مع ما ذكرته، أقترح مراجعة ريلز الأمان لتسريع الإنجاز.';
     }
 
     setLiveAIReply(reply);
@@ -126,70 +122,64 @@ export const HandsFreeVoiceCall: React.FC<HandsFreeVoiceCallProps> = ({
 
     setTimeout(() => {
       setCallStatus('listening');
-    }, 4500);
+    }, 4000);
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 bg-grid-tactical p-4 backdrop-blur-xl">
-      <div className="hud-panel w-full max-w-lg rounded-2xl border border-cyan-500/40 p-6 shadow-2xl relative overflow-hidden flex flex-col items-center text-center">
-        {/* Radar scan ring */}
-        <div className="absolute inset-0 bg-gradient-to-b from-cyan-500/5 via-transparent to-cyan-500/5 pointer-events-none" />
-
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 backdrop-blur-md">
+      <div className="craft-surface-elevated w-full max-w-lg rounded-3xl p-7 flex flex-col items-center text-center shadow-2xl relative">
         {/* Top bar */}
-        <div className="flex items-center justify-between w-full pb-3 border-b border-slate-800 mb-6">
+        <div className="flex items-center justify-between w-full pb-3 border-b craft-border mb-6">
           <div className="flex items-center gap-2">
-            <Radio className="h-4 w-4 text-cyan-400 animate-pulse" />
-            <span className="text-xs font-mono-hud text-cyan-300 font-bold uppercase">
-              // TACTICAL LIVE COMMS // HANDS-FREE
+            <Radio className="h-4 w-4 text-cyan-400" />
+            <span className="text-xs font-telemetry text-zinc-300 font-bold uppercase">
+              // TACTICAL COMMS // HANDS-FREE
             </span>
           </div>
-          <span className="flex items-center gap-1.5 text-[11px] font-mono-hud text-emerald-400 bg-emerald-950/60 border border-emerald-800/60 px-2 py-0.5 rounded">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping" />
-            <span>FULL DUPLEX LIVE</span>
+          <span className="text-[11px] font-telemetry text-emerald-400 bg-zinc-800 border craft-border px-2 py-0.5 rounded-md">
+            FULL DUPLEX
           </span>
         </div>
 
-        {/* Animated Audio Visualizer Rings */}
-        <div className="relative my-8 flex items-center justify-center">
-          <div className={`h-40 w-40 rounded-full border-2 border-cyan-500/30 flex items-center justify-center transition-all duration-500 ${
-            callStatus === 'speaking' || callStatus === 'listening' ? 'scale-110 border-cyan-400/60 glow-cyan' : ''
+        {/* Minimalist Acoustic Orb */}
+        <div className="my-8 flex items-center justify-center">
+          <div className={`h-36 w-36 rounded-full border border-zinc-700/80 flex items-center justify-center transition-all duration-300 ${
+            callStatus === 'speaking' || callStatus === 'listening' ? 'scale-105 border-zinc-500' : ''
           }`}>
-            <div className={`h-28 w-28 rounded-full border border-cyan-400/50 flex items-center justify-center bg-cyan-500/10 ${
+            <div className={`h-24 w-24 rounded-full border craft-border flex items-center justify-center bg-zinc-900 ${
               callStatus === 'listening' ? 'animate-pulse' : ''
             }`}>
-              <div className="h-16 w-16 rounded-full bg-cyan-500/20 border border-cyan-400 flex items-center justify-center text-cyan-300">
+              <div className="h-14 w-14 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-200">
                 {callStatus === 'speaking' ? (
-                  <Volume2 className="h-8 w-8 animate-bounce" />
+                  <Volume2 className="h-6 w-6 text-cyan-400" />
                 ) : (
-                  <Mic className="h-8 w-8 animate-pulse" />
+                  <Mic className="h-6 w-6 text-zinc-300" />
                 )}
               </div>
             </div>
           </div>
         </div>
 
-        {/* Live Status Text */}
-        <div className="mb-6 space-y-1">
-          <div className="text-xs font-mono-hud text-slate-400 uppercase">
-            {callStatus === 'connecting' && 'جاري فتح الخط المشفر...'}
-            {callStatus === 'listening' && 'المستشار يستمع إليك الآن (تحدث بحرية دون لمس الشاشة)...'}
-            {callStatus === 'speaking' && 'المستشار يتحدث الآن...'}
-          </div>
+        {/* Status text */}
+        <div className="mb-5 text-xs font-telemetry text-zinc-400">
+          {callStatus === 'connecting' && 'جاري فتح الخط المشفر...'}
+          {callStatus === 'listening' && 'المستشار يستمع إليك الآن (تحدث بحرية دون لمس الشاشة)...'}
+          {callStatus === 'speaking' && 'المستشار يتحدث الآن...'}
         </div>
 
-        {/* Transcripts Display */}
-        <div className="w-full space-y-2 mb-6 text-xs text-right bg-slate-950/70 p-3 rounded-xl border border-slate-800 max-h-36 overflow-y-auto">
+        {/* Transcripts */}
+        <div className="w-full space-y-2 mb-6 text-xs text-right bg-black/40 p-3.5 rounded-xl border craft-border max-h-36 overflow-y-auto">
           {liveUserSpeech && (
-            <div className="text-emerald-300">
-              <span className="font-bold font-mono-hud text-slate-500 text-[10px]">الـقـائـد: </span>
+            <div className="text-zinc-200">
+              <span className="font-bold font-telemetry text-zinc-500 text-[10px]">الـقـائـد: </span>
               <span>{liveUserSpeech}</span>
             </div>
           )}
           {liveAIReply && (
-            <div className="text-cyan-200">
-              <span className="font-bold font-mono-hud text-slate-500 text-[10px]">المستشار: </span>
+            <div className="text-zinc-300">
+              <span className="font-bold font-telemetry text-zinc-500 text-[10px]">المستشار: </span>
               <span>{liveAIReply}</span>
             </div>
           )}
@@ -201,7 +191,7 @@ export const HandsFreeVoiceCall: React.FC<HandsFreeVoiceCallProps> = ({
             tacticalAudio.playAlert();
             onClose();
           }}
-          className="flex items-center gap-2 rounded-xl bg-red-600/90 hover:bg-red-700 text-white font-bold px-6 py-2.5 shadow-lg active:scale-95 transition-all glow-amber"
+          className="flex items-center gap-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-2.5 shadow-sm active:scale-95 transition-all text-xs"
         >
           <PhoneOff className="h-4 w-4" />
           <span>إنهاء المكالمة</span>
