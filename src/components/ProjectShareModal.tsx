@@ -213,6 +213,26 @@ ${linkedIntel.map((i) => `### ${i.title}
                 {sitrepText}
               </pre>
 
+              {/* Instant Messenger Dispatch Actions */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <a
+                  href={`https://api.whatsapp.com/send?text=${encodeURIComponent(sitrepText)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 p-2.5 rounded-xl bg-emerald-950/40 hover:bg-emerald-900/50 border border-emerald-800/60 text-emerald-300 text-xs font-bold transition-all shadow-sm"
+                >
+                  <span>💬 إرسال فوري عبر واتساب (WhatsApp)</span>
+                </a>
+                <a
+                  href={`https://t.me/share/url?url=&text=${encodeURIComponent(sitrepText)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 p-2.5 rounded-xl bg-cyan-950/40 hover:bg-cyan-900/50 border border-cyan-800/60 text-cyan-300 text-xs font-bold transition-all shadow-sm"
+                >
+                  <span>✈️ إرسال فوري عبر تيليجرام (Telegram)</span>
+                </a>
+              </div>
+
               {/* Encrypted Share Snapshot Token */}
               <div className="p-3.5 rounded-xl bg-zinc-900/60 border craft-border flex items-center justify-between">
                 <div>

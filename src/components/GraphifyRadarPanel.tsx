@@ -56,7 +56,7 @@ export const GraphifyRadarPanel: React.FC<GraphifyRadarPanelProps> = ({
   const [selectedNode, setSelectedNode] = useState<SimNode | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
-  const [radarMode, setRadarMode] = useState<'orbital' | 'neural'>('neural');
+  const [radarMode, setRadarMode] = useState<'orbital' | 'neural'>('orbital');
   const [filterType, setFilterType] = useState<'all' | 'missions' | 'intel'>('all');
   
   // Dragging state
@@ -342,10 +342,16 @@ export const GraphifyRadarPanel: React.FC<GraphifyRadarPanelProps> = ({
 
         const isHovered = selectedNode?.id === n.id;
 
-        // Outer Glow Ring
+        // Radar Sweep Ping Detection
+        const nodeAngle = Math.atan2(n.y - (cy - panOffset.y), n.x - (cx - panOffset.x));
+        const normNodeAngle = (nodeAngle + Math.PI * 2) % (Math.PI * 2);
+        const angleDiff = Math.abs(sweepAngle - normNodeAngle);
+        const isSweepPinging = angleDiff < 0.22 || Math.abs(angleDiff - Math.PI * 2) < 0.22;
+
+        // Outer Glow Ring with Radar Ping Flash
         ctx.beginPath();
-        ctx.arc(n.x, n.y, n.radius + (isHovered ? 8 : 4), 0, Math.PI * 2);
-        ctx.fillStyle = n.glowColor;
+        ctx.arc(n.x, n.y, n.radius + (isHovered ? 8 : isSweepPinging ? 10 : 4), 0, Math.PI * 2);
+        ctx.fillStyle = isSweepPinging ? 'rgba(16, 185, 129, 0.7)' : n.glowColor;
         ctx.fill();
 
         // Node Body
