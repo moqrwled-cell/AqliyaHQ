@@ -1,16 +1,21 @@
 const { app, BrowserWindow } = require('electron');
 const path = require('path');
 
+// Disable hardware acceleration to eliminate transparent / black window GPU crashes on Windows
+app.disableHardwareAcceleration();
+
 let mainWindow = null;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 1400,
-    height: 900,
-    minWidth: 1000,
-    minHeight: 650,
+    width: 1440,
+    height: 920,
+    minWidth: 1024,
+    minHeight: 700,
     title: 'عقلية | AQLIYA HQ — غرفة العمليات التكتيكية',
     backgroundColor: '#09090b',
+    transparent: false,
+    frame: true,
     show: true,
     autoHideMenuBar: true,
     webPreferences: {
@@ -24,14 +29,6 @@ function createWindow() {
   const indexPath = path.join(__dirname, 'dist', 'index.html');
   mainWindow.loadFile(indexPath);
 
-  // Allow F12 or Ctrl+Shift+I to open DevTools easily for inspection
-  mainWindow.webContents.on('before-input-event', (event, input) => {
-    if (input.key === 'F12' || (input.control && input.shift && input.key.toLowerCase() === 'i')) {
-      mainWindow.webContents.toggleDevTools();
-      event.preventDefault();
-    }
-  });
-
   mainWindow.on('closed', () => {
     mainWindow = null;
     app.quit();
@@ -42,12 +39,4 @@ app.whenReady().then(createWindow);
 
 app.on('window-all-closed', () => {
   app.quit();
-});
-
-// Force exit cleanly on quit
-app.on('before-quit', () => {
-  if (mainWindow) {
-    mainWindow.removeAllListeners('close');
-    mainWindow.close();
-  }
 });
