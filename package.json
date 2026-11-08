@@ -42,22 +42,15 @@
     "directories": {
       "output": "dist-electron"
     },
+    "npmRebuild": false,
+    "nodeGypRebuild": false,
     "files": [
       "dist/**/*",
       "electron-main.cjs",
       "package.json"
     ],
     "win": {
-      "target": [
-        {
-          "target": "nsis",
-          "arch": ["x64"]
-        },
-        {
-          "target": "portable",
-          "arch": ["x64"]
-        }
-      ]
+      "target": ["dir"]
     },
     "nsis": {
       "oneClick": false,
