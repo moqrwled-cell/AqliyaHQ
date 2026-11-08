@@ -2,66 +2,135 @@
 
 @layer base {
   :root {
-    --bg-base: #09090b;
-    --bg-surface: #0f1117;
-    --bg-elevated: #151821;
-    --border-subtle: rgba(255, 255, 255, 0.07);
-    --border-active: rgba(255, 255, 255, 0.15);
-    --text-primary: #f4f4f5;
-    --text-secondary: #a1a1aa;
-    --text-muted: #71717a;
+    --bg-void: #05070a;
+    --bg-base: #07090e;
+    --bg-surface: #0c101a;
+    --bg-elevated: #111726;
+    --bg-card: #0e1320;
+    
+    --border-subtle: rgba(255, 255, 255, 0.08);
+    --border-light: rgba(255, 255, 255, 0.14);
+    --border-emerald: rgba(16, 185, 129, 0.3);
+    --border-cyan: rgba(6, 182, 212, 0.3);
+    
+    --text-primary: #f4f6fb;
+    --text-secondary: #9aa4bf;
+    --text-muted: #64708d;
+    
     --accent-emerald: #10b981;
     --accent-cyan: #06b6d4;
     --accent-amber: #f59e0b;
+    --accent-rose: #f43f5e;
   }
 
-  body {
-    background-color: var(--bg-base);
+  html, body, #root {
+    height: 100%;
+    max-height: 100vh;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background-color: var(--bg-void);
     color: var(--text-primary);
     font-family: 'Cairo', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
     direction: rtl;
-    overflow-x: hidden;
     letter-spacing: -0.01em;
+    user-select: none;
+  }
+
+  /* Allow text selection in inputs and messages */
+  input, textarea, [contenteditable="true"], .selectable-text {
+    user-select: text;
   }
 }
 
-/* Linear / Raycast Style Surface Utilities (Unslop & Impeccable) */
+/* Tactical HUD Surface Utilities (Unslop + Taste-Skil + Impeccable) */
 .craft-surface {
-  background-color: #0f1117;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  background: linear-gradient(180deg, #0d121e 0%, #080b13 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .craft-surface-elevated {
-  background-color: #141720;
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  background: linear-gradient(180deg, #121929 0%, #0d1322 100%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 32px -4px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .craft-border {
-  border-color: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.08);
 }
 
-.craft-border-hover:hover {
-  border-color: rgba(255, 255, 255, 0.16);
+.craft-border-active {
+  border-color: rgba(16, 185, 129, 0.4);
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.15);
 }
 
-/* Subtle, Disciplined Scrollbar */
+.hud-panel {
+  position: relative;
+  background-color: #0a0e18;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.hud-panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(16, 185, 129, 0.4), transparent);
+}
+
+/* Grid Backdrop */
+.hud-grid-bg {
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Scrollbar Crafted for Fluid Up/Down Navigation */
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: rgba(0, 0, 0, 0.2);
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.16);
   border-radius: 9999px;
+  border: 1px solid rgba(0, 0, 0, 0.3);
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.22);
+  background: rgba(16, 185, 129, 0.5);
+}
+
+.scrollbar-tactical {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scroll-behavior: smooth;
 }
 
 .font-telemetry {
   font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* Radar pulse animation */
+@keyframes radar-sweep {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.animate-radar-sweep {
+  animation: radar-sweep 6s linear infinite;
+}
+
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }

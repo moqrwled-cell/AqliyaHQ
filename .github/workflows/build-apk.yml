@@ -24,22 +24,24 @@ jobs:
           distribution: 'temurin'
           cache: 'gradle'
 
-      - name: Set up Node.js
+      - name: Set up Node.js 22
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Accept Android SDK Licenses
+        run: |
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
       - name: Install NPM Dependencies
-        run: npm ci || npm install
+        run: npm install --legacy-peer-deps
 
       - name: Build Web Production Assets
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://zydgpjqllgthkqabphth.supabase.co' }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp5ZGdwanFsbGd0aGtxYWJwaHRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQwODA2MDksImV4cCI6MjEwOTY1NjYwOX0.rpWxWfDfRtGdjKo7NWmIY38F795r5w6sRIsgGaQo5n8' }}
+          VITE_GEMINI_API_KEY: ${{ secrets.VITE_GEMINI_API_KEY }}
         run: npm run build
 
       - name: Sync Capacitor Android
@@ -51,7 +53,7 @@ jobs:
       - name: Build Debug APK with Gradle
         run: |
           cd android
-          ./gradlew assembleDebug --stacktrace
+          ./gradlew assembleDebug --no-daemon --stacktrace
 
       - name: Rename & Prepare APK
         run: |
@@ -78,6 +80,7 @@ jobs:
             - **الميزات:**
               - التقاط سريع للريلزات والفيديوهات عبر زر المشاركة.
               - مكالمة صوتية حية بدون لمس الشاشة (Hands-Free).
+              - محرك Google Gemini فائق السرعة مدمج ومفعل.
               - مزامنة سحابية لحظية مع قاعدة بيانات Supabase.
               - رادار شبكة الأفكار ومتابعة مشاريع NexusOS.
           files: build-output/AqliyaHQ-Android-v1.0.apk

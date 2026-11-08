@@ -109,9 +109,9 @@ export const IntelDepotPanel: React.FC<IntelDepotPanelProps> = ({
   });
 
   return (
-    <div className="flex flex-col h-full craft-surface rounded-2xl p-4 overflow-hidden text-right">
+    <div className="flex flex-col h-full min-h-0 craft-surface rounded-xl p-3.5 sm:p-4 overflow-hidden text-right border craft-border shadow-xl">
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between pb-3 border-b craft-border mb-3 gap-2">
+      <div className="flex flex-wrap items-center justify-between pb-3 border-b craft-border mb-3 gap-2 flex-shrink-0">
         <div className="flex items-center gap-2.5">
           <div className="p-2 rounded-xl bg-zinc-800/80 border craft-border text-zinc-200">
             <Database className="h-4 w-4" />
@@ -198,7 +198,7 @@ export const IntelDepotPanel: React.FC<IntelDepotPanelProps> = ({
       </div>
 
       {/* Cards List */}
-      <div className="flex-1 overflow-y-auto space-y-2.5 pr-1 text-xs">
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain space-y-2.5 pr-1 text-xs scrollbar-tactical">
         {filteredItems.length > 0 ? (
           filteredItems.map((item) => (
             <div

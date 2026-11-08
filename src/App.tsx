@@ -207,7 +207,7 @@ export function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#09090b] text-zinc-100 flex flex-col font-sans selection:bg-zinc-800">
+    <div className="h-screen max-h-screen w-screen overflow-hidden bg-[#05070a] text-zinc-100 flex flex-col font-sans selection:bg-emerald-900/50 hud-grid-bg">
       {/* Header HUD */}
       <HeaderHUD
         onLock={() => setIsLocked(true)}
@@ -238,14 +238,16 @@ export function App() {
       />
 
       {/* Main Command Center Deck */}
-      <main className="flex-1 p-3 md:p-4 pb-20 lg:pb-4 overflow-hidden max-w-[1700px] w-full mx-auto">
+      <main className="flex-1 min-h-0 p-2.5 sm:p-3 lg:p-3.5 pb-20 lg:pb-3.5 overflow-hidden w-full flex flex-col">
         {/* Desktop View */}
-        <div className="hidden lg:grid grid-cols-12 gap-4 h-[calc(100vh-80px)]">
+        <div className="hidden lg:grid grid-cols-12 gap-3.5 h-full min-h-0 flex-1">
           {/* Left Panel: Missions & NexusOS */}
-          <div className="col-span-4 h-full">
+          <div className="col-span-4 h-full min-h-0 flex flex-col">
             <MissionsPanel
               missions={missions}
               selectedMission={selectedMission}
+              intel={intelItems}
+              directives={directives}
               onSelectMission={setSelectedMission}
               onUpdateMission={handleUpdateMission}
               onAddMission={handleAddMission}
@@ -253,8 +255,8 @@ export function App() {
           </div>
 
           {/* Center Panel: Intel Depot & Graphify Radar */}
-          <div className="col-span-4 h-full flex flex-col gap-4">
-            <div className="flex-1 min-h-[50%]">
+          <div className="col-span-4 h-full min-h-0 flex flex-col gap-3">
+            <div className="h-[48%] min-h-0 flex flex-col">
               <IntelDepotPanel
                 items={intelItems}
                 missions={missions}
@@ -262,11 +264,12 @@ export function App() {
                 onUpdateStatus={handleUpdateIntelStatus}
               />
             </div>
-            <div className="h-[45%]">
+            <div className="flex-1 min-h-0 flex flex-col">
               <GraphifyRadarPanel
                 missions={missions}
                 intel={intelItems}
                 directives={directives}
+                onSelectMission={setSelectedMission}
                 onTriggerGraphifyScan={() => {
                   handleAddChatMessage({
                     id: `scan-${Date.now()}`,
@@ -279,8 +282,8 @@ export function App() {
             </div>
           </div>
 
-          {/* Right Panel: Commander AI with Gemini 1.5 Flash */}
-          <div className="col-span-4 h-full">
+          {/* Right Panel: Commander AI with Gemini 3.5 Flash */}
+          <div className="col-span-4 h-full min-h-0 flex flex-col">
             <CommanderAIPanel
               messages={chatMessages}
               missions={missions}
@@ -295,11 +298,13 @@ export function App() {
         </div>
 
         {/* Mobile View */}
-        <div className="lg:hidden h-[calc(100vh-140px)]">
+        <div className="lg:hidden h-[calc(100vh-140px)] min-h-0 overflow-hidden">
           {mobileTab === 'missions' && (
             <MissionsPanel
               missions={missions}
               selectedMission={selectedMission}
+              intel={intelItems}
+              directives={directives}
               onSelectMission={setSelectedMission}
               onUpdateMission={handleUpdateMission}
               onAddMission={handleAddMission}
@@ -320,6 +325,7 @@ export function App() {
               missions={missions}
               intel={intelItems}
               directives={directives}
+              onSelectMission={setSelectedMission}
               onTriggerGraphifyScan={() => {}}
             />
           )}
