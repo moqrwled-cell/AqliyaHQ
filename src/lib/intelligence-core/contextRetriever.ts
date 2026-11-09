@@ -4,6 +4,7 @@
 
 import type { Mission, IntelItem, CommanderDossier, CommanderMemory, StrategicDirective } from '../../types';
 import type { RetrievedContext, RequestIntent } from './types';
+import { MemoryContextRetriever } from '../memory-graph/memoryContextRetriever';
 
 export class ContextRetrievalEngine {
   /**
@@ -56,47 +57,48 @@ export class ContextRetrievalEngine {
       }
     }
 
-    // 2. تصفية الذكريات ذات الصلة فقط (Selective Memory Retrieval)
-    const relevantMemories = memories.filter((mem) => {
-      // ذكريات المشروع المحدد
-      if (primaryProject && mem.mission_id === primaryProject.id) return true;
+    // 2. استدعاء محرك الذاكرة السباعية والـ Knowledge Graph
+    const targetedMemory = MemoryContextRetriever.retrieveTargetedContext({
+      userPrompt,
+      intent,
+      activeProjectId: primaryProject ? primaryProject.id : activeProjectId,
+    });
 
-      // مطابقة حسب النية
+    // 3. تصفية الذكريات ذات الصلة فقط (Selective Memory Retrieval)
+    const relevantMemories = memories.filter((mem) => {
+      if (primaryProject && mem.mission_id === primaryProject.id) return true;
       if (intent === 'life_ops_memory') {
         return (
           mem.context_tags.some((t) => ['rhythm', 'routine', 'energy', 'health', 'discovery', 'life'].includes(t)) ||
           mem.memory_type === 'preference'
         );
       }
-
       if (intent === 'strategic_planning') {
         return (
           mem.context_tags.some((t) => ['vision', 'strategy', 'principles', 'decision'].includes(t)) ||
           mem.memory_type === 'decision'
         );
       }
-
-      // البحث عن أي كلمة مفتاحية من الطلب داخل نص الذاكرة
       const promptWords = lowerPrompt.split(/\s+/).filter((w) => w.length > 3);
       return promptWords.some((word) => mem.content.toLowerCase().includes(word));
-    }).slice(0, 7); // أخذ أهم 7 ذكريات فقط منعاً للتشويش
+    }).slice(0, 5);
 
-    // 3. تصفية بنك الاستخبارات ذي الصلة (Intel Depot Retrieval)
+    // 4. تصفية بنك الاستخبارات ذي الصلة (Intel Depot Retrieval)
     const relevantIntel = intel.filter((item) => {
       if (primaryProject && item.mission_id === primaryProject.id) return true;
       const promptWords = lowerPrompt.split(/\s+/).filter((w) => w.length > 3);
       const titleHit = promptWords.some((w) => item.title.toLowerCase().includes(w));
       const problemHit = item.problem_solved && promptWords.some((w) => item.problem_solved!.toLowerCase().includes(w));
       return titleHit || problemHit;
-    }).slice(0, 5);
+    }).slice(0, 3);
 
-    // 4. تصفية التوجيهات الاستراتيجية
+    // 5. تصفية التوجيهات الاستراتيجية
     const relevantDirectives = directives.filter((d) => {
       if (primaryProject && primaryProject.title.includes(d.title)) return true;
       return lowerPrompt.includes(d.pillar) || lowerPrompt.includes(d.title.toLowerCase());
     }).slice(0, 3);
 
-    // بناء ملخص سياقي نصي مكثف
+    // بناء ملخص سياقي نصي مكثف يدمج الذاكرة السباعية والـ Knowledge Graph
     const contextParts: string[] = [];
 
     if (primaryProject) {
@@ -105,15 +107,14 @@ export class ContextRetrievalEngine {
       );
     }
 
-    if (relevantMemories.length > 0) {
-      contextParts.push(
-        `الذكريات المسترجعة:\n` + relevantMemories.map((m) => `- [${m.memory_type}]: ${m.content}`).join('\n')
-      );
+    // إدراج تفاصيل الـ Knowledge Graph (القرارات السابقة، خطوات المشروع الكاملة، الأخطاء والوقاية)
+    if (targetedMemory.structuredSummary) {
+      contextParts.push(targetedMemory.structuredSummary);
     }
 
-    if (relevantIntel.length > 0) {
+    if (relevantMemories.length > 0) {
       contextParts.push(
-        `الحلول الاستخباراتية ذات الصلة:\n` + relevantIntel.map((i) => `- ${i.title}: ${i.problem_solved}`).join('\n')
+        `ذكريات إضافية من Supabase:\n` + relevantMemories.map((m) => `- [${m.memory_type}]: ${m.content}`).join('\n')
       );
     }
 

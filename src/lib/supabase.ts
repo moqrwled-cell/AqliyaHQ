@@ -20,15 +20,20 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 export const offlineStorage = {
   save: (key: string, data: any) => {
     try {
-      localStorage.setItem(`aqliya_${key}`, JSON.stringify(data));
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(`aqliya_${key}`, JSON.stringify(data));
+      }
     } catch (e) {
       console.warn('Offline storage write failed', e);
     }
   },
   get: <T>(key: string, fallback: T): T => {
     try {
-      const item = localStorage.getItem(`aqliya_${key}`);
-      return item ? JSON.parse(item) : fallback;
+      if (typeof localStorage !== 'undefined') {
+        const item = localStorage.getItem(`aqliya_${key}`);
+        return item ? JSON.parse(item) : fallback;
+      }
+      return fallback;
     } catch (e) {
       console.warn('Offline storage read failed', e);
       return fallback;
