@@ -10,7 +10,9 @@ import {
   Circle,
   ShieldAlert,
   Brain,
-  CalendarCheck
+  CalendarCheck,
+  Bot,
+  Cpu
 } from 'lucide-react';
 import { tacticalAudio } from '../lib/audio';
 
@@ -20,8 +22,9 @@ interface HeaderHUDProps {
   onOpenBriefing: () => void;
   onOpenWatchdog: () => void;
   watchdogCount: number;
-  activeMainView: 'deck' | 'vault';
+  activeMainView: 'deck' | 'vault' | 'swarm';
   onToggleMindVault: () => void;
+  onToggleSwarm: () => void;
   onExportMarkdown: () => void;
   onOpenSettings: () => void;
   isOnline: boolean;
@@ -37,6 +40,7 @@ export const HeaderHUD: React.FC<HeaderHUDProps> = ({
   watchdogCount,
   activeMainView,
   onToggleMindVault,
+  onToggleSwarm,
   onExportMarkdown,
   onOpenSettings,
   isOnline,
@@ -72,7 +76,7 @@ export const HeaderHUD: React.FC<HeaderHUDProps> = ({
               </h1>
               <span className="text-[11px] font-telemetry text-zinc-500 font-normal">/ AQLIYA HQ</span>
               <span className="rounded-md bg-zinc-800/80 px-2 py-0.5 text-[10px] font-telemetry text-zinc-300 border craft-border">
-                LIFE COMMAND
+                AGENTIC OS
               </span>
             </div>
             <div className="flex items-center gap-2 text-[11px] font-telemetry text-zinc-400 mt-0.5">
@@ -81,7 +85,7 @@ export const HeaderHUD: React.FC<HeaderHUDProps> = ({
                 <span>{isOnline ? 'SUPABASE // REALTIME' : 'OFFLINE MODE'}</span>
               </span>
               <span className="text-zinc-600">•</span>
-              <span className="text-emerald-400/90 font-bold">NEXUS-CORE: ONLINE</span>
+              <span className="text-cyan-400 font-bold">SWARM: 5 AGENTS READY</span>
             </div>
           </div>
         </div>
@@ -89,6 +93,23 @@ export const HeaderHUD: React.FC<HeaderHUDProps> = ({
         {/* Operational Actions */}
         <div className="flex items-center gap-2">
           
+          {/* Agent Swarm Deck Toggle */}
+          <button
+            onClick={() => {
+              tacticalAudio.playBlip();
+              onToggleSwarm();
+            }}
+            className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-telemetry transition-all active:scale-95 ${
+              activeMainView === 'swarm'
+                ? 'bg-cyan-950/80 border-cyan-500 text-cyan-200 font-bold shadow-[0_0_15px_rgba(6,182,212,0.3)]'
+                : 'bg-zinc-900/80 border craft-border text-zinc-300 hover:text-white hover:bg-zinc-800'
+            }`}
+            title="غرفة عمليات أسطول الوكلاء الذاتي (Agentic OS)"
+          >
+            <Cpu className="h-3.5 w-3.5 text-cyan-400" />
+            <span className="hidden sm:inline">أسطول الوكلاء</span>
+          </button>
+
           {/* Watchdog Radar Alert Button */}
           <button
             onClick={() => {
@@ -169,32 +190,30 @@ export const HeaderHUD: React.FC<HeaderHUDProps> = ({
 
           {/* Settings Trigger */}
           <button
-            onClick={() => {
-              tacticalAudio.playBlip();
-              onOpenSettings();
-            }}
-            className="flex items-center justify-center rounded-lg border craft-border bg-zinc-900/60 p-2 text-zinc-300 hover:text-white hover:bg-zinc-800/80 active:scale-95 transition-all"
-            title="إعدادات المفاتيح والنظام"
+            onClick={onOpenSettings}
+            className="rounded-lg border craft-border bg-zinc-900/80 p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 active:scale-95 transition-all"
+            title="إعدادات المنظومة ونموذج الذكاء الاصطناعي"
           >
-            <Settings className="h-3.5 w-3.5" />
+            <Settings className="h-4 w-4" />
           </button>
 
-          {/* Time Display */}
-          <div className="hidden sm:flex items-center rounded-lg border craft-border bg-black/40 px-2.5 py-1 text-xs font-telemetry text-zinc-300">
-            {timeStr}
-          </div>
-
-          {/* Lock Button */}
+          {/* Security Lock Button */}
           <button
             onClick={() => {
               tacticalAudio.playAlert();
               onLock();
             }}
-            className="flex items-center justify-center rounded-lg border craft-border bg-zinc-900/60 p-2 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 active:scale-95 transition-all"
-            title="قفل الثكنة"
+            className="rounded-lg border craft-border bg-zinc-900/80 p-1.5 text-zinc-400 hover:text-rose-400 hover:bg-zinc-800 active:scale-95 transition-all"
+            title="قفل فوري لغرفة العمليات"
           >
-            <Lock className="h-3.5 w-3.5" />
+            <Lock className="h-4 w-4" />
           </button>
+
+          {/* Clock Display */}
+          <div className="hidden 2xl:flex items-center gap-2 pl-2 border-l craft-border text-xs font-telemetry text-zinc-400">
+            <span>{timeStr}</span>
+            <span className="text-[10px] text-zinc-600">GZA</span>
+          </div>
 
         </div>
       </div>

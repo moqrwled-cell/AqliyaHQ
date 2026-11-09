@@ -1,10 +1,10 @@
 import React from 'react';
-import { Target, Database, Compass, Bot, Plus, Brain } from 'lucide-react';
+import { Target, Database, Compass, Bot, Plus, Brain, Cpu } from 'lucide-react';
 import { tacticalAudio } from '../lib/audio';
 
 interface MobileNavProps {
-  activeTab: 'missions' | 'intel' | 'radar' | 'ai' | 'vault';
-  onSelectTab: (tab: 'missions' | 'intel' | 'radar' | 'ai' | 'vault') => void;
+  activeTab: 'missions' | 'intel' | 'radar' | 'ai' | 'vault' | 'swarm';
+  onSelectTab: (tab: 'missions' | 'intel' | 'radar' | 'ai' | 'vault' | 'swarm') => void;
   onQuickCapture: () => void;
   onOpenVoiceCall: () => void;
 }
@@ -16,7 +16,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({
   onOpenVoiceCall,
 }) => {
   return (
-    <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#09090b]/95 border-t craft-border px-2 py-1.5 backdrop-blur-xl">
+    <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#09090b]/95 border-t craft-border px-1.5 py-1.5 backdrop-blur-xl">
       <div className="flex items-center justify-around relative">
         {/* Missions */}
         <button
@@ -46,8 +46,22 @@ export const MobileNav: React.FC<MobileNavProps> = ({
           <span>الاستخبارات</span>
         </button>
 
+        {/* Swarm (Agentic OS) */}
+        <button
+          onClick={() => {
+            tacticalAudio.playConfirm();
+            onSelectTab('swarm');
+          }}
+          className={`flex flex-col items-center gap-1 p-1 text-[10px] transition-all ${
+            activeTab === 'swarm' ? 'text-cyan-300 font-bold animate-pulse' : 'text-zinc-500'
+          }`}
+        >
+          <Cpu className="h-4 w-4" />
+          <span>الوكلاء</span>
+        </button>
+
         {/* Central Tactical Action Hub */}
-        <div className="relative -top-3">
+        <div className="relative -top-2.5">
           <button
             onClick={() => {
               tacticalAudio.playConfirm();
@@ -58,26 +72,12 @@ export const MobileNav: React.FC<MobileNavProps> = ({
               tacticalAudio.playAlert();
               onOpenVoiceCall();
             }}
-            className="flex h-12 w-12 items-center justify-center rounded-full bg-cyan-500 text-zinc-950 shadow-lg shadow-cyan-950 border border-cyan-400 active:scale-95 transition-all"
+            className="flex h-11 w-11 items-center justify-center rounded-full bg-cyan-500 text-zinc-950 shadow-lg shadow-cyan-950 border border-cyan-400 active:scale-95 transition-all"
             title="نقرة للالتقاط السريع • ضغطة مطولة للمكالمة الصوتية"
           >
             <Plus className="h-5 w-5 stroke-[2.5]" />
           </button>
         </div>
-
-        {/* Radar */}
-        <button
-          onClick={() => {
-            tacticalAudio.playBlip();
-            onSelectTab('radar');
-          }}
-          className={`flex flex-col items-center gap-1 p-1 text-[10px] transition-all ${
-            activeTab === 'radar' ? 'text-amber-400 font-bold' : 'text-zinc-500'
-          }`}
-        >
-          <Compass className="h-4 w-4" />
-          <span>الرادار</span>
-        </button>
 
         {/* Mind Vault */}
         <button
@@ -90,7 +90,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({
           }`}
         >
           <Brain className="h-4 w-4" />
-          <span>العقل والذاكرة</span>
+          <span>الذاكرة</span>
         </button>
 
         {/* AI Copilot */}
@@ -100,7 +100,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({
             onSelectTab('ai');
           }}
           className={`flex flex-col items-center gap-1 p-1 text-[10px] transition-all ${
-            activeTab === 'ai' ? 'text-cyan-300 font-bold' : 'text-zinc-500'
+            activeTab === 'ai' ? 'text-emerald-400 font-bold' : 'text-zinc-500'
           }`}
         >
           <Bot className="h-4 w-4" />

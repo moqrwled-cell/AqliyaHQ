@@ -17,6 +17,7 @@ import { IntelDepotPanel } from './components/IntelDepotPanel';
 import { GraphifyRadarPanel } from './components/GraphifyRadarPanel';
 import { CommanderAIPanel } from './components/CommanderAIPanel';
 import { MindVaultPanel } from './components/MindVaultPanel';
+import { AgenticCommandDeck } from './components/agentic-os/AgenticCommandDeck';
 import { SITREPBriefingModal } from './components/SITREPBriefingModal';
 import { WatchdogDrawer } from './components/WatchdogDrawer';
 import { HandsFreeVoiceCall } from './components/HandsFreeVoiceCall';
@@ -31,9 +32,9 @@ export function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isBriefingOpen, setIsBriefingOpen] = useState(false);
   const [isWatchdogOpen, setIsWatchdogOpen] = useState(false);
-  const [activeMainView, setActiveMainView] = useState<'deck' | 'vault'>('deck');
+  const [activeMainView, setActiveMainView] = useState<'deck' | 'vault' | 'swarm'>('deck');
   const [activeLayout, setActiveLayout] = useState<'tri-panel' | 'focused'>('tri-panel');
-  const [mobileTab, setMobileTab] = useState<'missions' | 'intel' | 'radar' | 'ai' | 'vault'>('ai');
+  const [mobileTab, setMobileTab] = useState<'missions' | 'intel' | 'radar' | 'ai' | 'vault' | 'swarm'>('ai');
   const [isVoiceCallOpen, setIsVoiceCallOpen] = useState(false);
   const [incomingSharedText, setIncomingSharedText] = useState<string | null>(null);
 
@@ -68,7 +69,7 @@ export function App() {
       {
         id: 'welcome-msg',
         role: 'assistant',
-        content: 'أهلاً بك في غرفة العمليات المركزية «عقلية»، يا قائد محمد. مستشارك التكتيكي جاهز ومتصل بمحرك Google Gemini فائق السرعة، ومربوط بسجل ذكرياتك ومشروع NexusOS وبنك الاستخبارات. كيف نتحرك اليوم؟',
+        content: 'أهلاً بك في غرفة العمليات المركزية «عقلية»، يا قائد محمد. مستشارك التكتيكي جاهز ومتصل بمحرك Google Gemini فائق السرعة، ومربوط بسجل ذكرياتك ومشروع NexusOS وبنك الاستخبارات وأسطول الوكلاء الذاتي. كيف نتحرك اليوم؟',
         created_at: new Date().toISOString(),
       }
     ])
@@ -356,6 +357,33 @@ export function App() {
     });
   };
 
+  // State mutation handler for agents
+  const handleStateMutation = async (type: string, payload: any) => {
+    switch (type) {
+      case 'add_memory':
+        setMemories((prev) => [payload, ...prev]);
+        offlineStorage.save('memories', [payload, ...memories]);
+        break;
+      case 'add_mission':
+        setMissions((prev) => [payload, ...prev]);
+        offlineStorage.save('missions', [payload, ...missions]);
+        break;
+      case 'update_mission':
+        setMissions((prev) =>
+          prev.map((m) => (m.id === payload.id ? { ...m, ...payload } : m))
+        );
+        break;
+      case 'add_intel':
+        setIntelItems((prev) => [payload, ...prev]);
+        offlineStorage.save('intel', [payload, ...intelItems]);
+        break;
+      case 'add_log':
+        setBattleLogs((prev) => [payload, ...prev]);
+        offlineStorage.save('logs', [payload, ...battleLogs]);
+        break;
+    }
+  };
+
   const handleAddChatMessage = (msg: ChatMessage) => {
     const updated = [...chatMessages, msg];
     setChatMessages(updated);
@@ -395,7 +423,10 @@ export function App() {
         watchdogCount={watchdogAlerts.length}
         activeMainView={activeMainView}
         onToggleMindVault={() =>
-          setActiveMainView((v) => (v === 'deck' ? 'vault' : 'deck'))
+          setActiveMainView((v) => (v === 'vault' ? 'deck' : 'vault'))
+        }
+        onToggleSwarm={() =>
+          setActiveMainView((v) => (v === 'swarm' ? 'deck' : 'swarm'))
         }
         onExportMarkdown={() =>
           exportObsidianMarkdown({
@@ -426,6 +457,18 @@ export function App() {
               onAddMemory={handleAddMemory}
               onDeleteMemory={handleDeleteMemory}
               onUpdateDossier={handleUpdateDossier}
+            />
+          </div>
+        ) : activeMainView === 'swarm' ? (
+          <div className="hidden lg:flex flex-col h-full min-h-0 flex-1">
+            <AgenticCommandDeck
+              missions={missions}
+              intel={intelItems}
+              memories={memories}
+              dossier={dossier}
+              battleLogs={battleLogs}
+              onOpenVoiceCall={() => setIsVoiceCallOpen(true)}
+              onStateMutation={handleStateMutation}
             />
           </div>
         ) : (
@@ -528,6 +571,18 @@ export function App() {
               onAddMemory={handleAddMemory}
               onDeleteMemory={handleDeleteMemory}
               onUpdateDossier={handleUpdateDossier}
+            />
+          )}
+
+          {mobileTab === 'swarm' && (
+            <AgenticCommandDeck
+              missions={missions}
+              intel={intelItems}
+              memories={memories}
+              dossier={dossier}
+              battleLogs={battleLogs}
+              onOpenVoiceCall={() => setIsVoiceCallOpen(true)}
+              onStateMutation={handleStateMutation}
             />
           )}
 
