@@ -1,20 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Radio, 
+  KeyRound, 
+  FolderKanban, 
+  Cpu, 
+  Brain, 
+  PhoneCall, 
+  Settings, 
   Lock, 
   FileDown, 
-  PhoneCall, 
-  Sparkles, 
-  Settings, 
-  Layers, 
   Circle,
-  ShieldAlert,
-  Brain,
+  Sparkles,
   CalendarCheck,
-  Bot,
-  Cpu
+  ShieldAlert
 } from 'lucide-react';
-import { tacticalAudio } from '../lib/audio';
 
 interface HeaderHUDProps {
   onLock: () => void;
@@ -22,14 +20,11 @@ interface HeaderHUDProps {
   onOpenBriefing: () => void;
   onOpenWatchdog: () => void;
   watchdogCount: number;
-  activeMainView: 'deck' | 'vault' | 'swarm';
-  onToggleMindVault: () => void;
-  onToggleSwarm: () => void;
+  activeMainView: 'deck' | 'vault_browser' | 'accounts' | 'swarm' | 'memory';
+  onSelectMainView: (view: 'deck' | 'vault_browser' | 'accounts' | 'swarm' | 'memory') => void;
   onExportMarkdown: () => void;
   onOpenSettings: () => void;
   isOnline: boolean;
-  activeLayout: 'tri-panel' | 'focused';
-  onToggleLayout: () => void;
 }
 
 export const HeaderHUD: React.FC<HeaderHUDProps> = ({
@@ -39,13 +34,10 @@ export const HeaderHUD: React.FC<HeaderHUDProps> = ({
   onOpenWatchdog,
   watchdogCount,
   activeMainView,
-  onToggleMindVault,
-  onToggleSwarm,
+  onSelectMainView,
   onExportMarkdown,
   onOpenSettings,
   isOnline,
-  activeLayout,
-  onToggleLayout,
 }) => {
   const [timeStr, setTimeStr] = useState('');
 
@@ -60,159 +52,154 @@ export const HeaderHUD: React.FC<HeaderHUDProps> = ({
   }, []);
 
   return (
-    <header className="sticky top-0 z-40 bg-[#09090b]/90 border-b craft-border px-3 sm:px-4 py-2.5 backdrop-blur-md flex-shrink-0">
-      <div className="flex flex-wrap items-center justify-between gap-2.5 max-w-[1700px] mx-auto">
+    <header className="sticky top-0 z-40 apple-glass border-b border-white/5 px-4 py-2.5 backdrop-blur-2xl flex-shrink-0">
+      <div className="flex flex-wrap items-center justify-between gap-3 max-w-[1700px] mx-auto">
         
-        {/* Brand & Status */}
+        {/* Brand & Identity */}
         <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-900 border craft-border text-zinc-100 shadow-sm">
-            <Radio className="h-4 w-4 text-emerald-400" />
-          </div>
+          <button
+            onClick={() => onSelectMainView('deck')}
+            className="flex h-9 w-9 items-center justify-center rounded-2xl bg-gradient-to-b from-emerald-400 to-emerald-600 text-zinc-950 shadow-[0_0_20px_rgba(16,185,129,0.3)] active:scale-95 transition-all"
+          >
+            <Sparkles className="h-4.5 w-4.5 stroke-[2.5]" />
+          </button>
 
-          <div>
+          <div className="text-right">
             <div className="flex items-center gap-2">
-              <h1 className="text-sm font-bold tracking-tight text-zinc-100">
+              <h1 className="text-base font-bold text-white tracking-tight">
                 عـقـلـيـة
               </h1>
-              <span className="text-[11px] font-telemetry text-zinc-500 font-normal">/ AQLIYA HQ</span>
-              <span className="rounded-md bg-zinc-800/80 px-2 py-0.5 text-[10px] font-telemetry text-zinc-300 border craft-border">
-                AGENTIC OS
-              </span>
+              <span className="text-xs text-zinc-400 font-medium">| المساعد الشخصي الذكي</span>
             </div>
-            <div className="flex items-center gap-2 text-[11px] font-telemetry text-zinc-400 mt-0.5">
-              <span className="flex items-center gap-1.5 text-zinc-300">
-                <Circle className={`h-1.5 w-1.5 fill-current ${isOnline ? 'text-emerald-500' : 'text-amber-500'}`} />
-                <span>{isOnline ? 'SUPABASE // REALTIME' : 'OFFLINE MODE'}</span>
+            <div className="flex items-center gap-2 text-[11px] text-zinc-400">
+              <span className="flex items-center gap-1.5">
+                <Circle className={`h-1.5 w-1.5 fill-current ${isOnline ? 'text-emerald-400' : 'text-amber-400'}`} />
+                <span>{isOnline ? 'مزامنة سحابية متصلة' : 'الوضع المحلي أوفلاين'}</span>
               </span>
               <span className="text-zinc-600">•</span>
-              <span className="text-cyan-400 font-bold">SWARM: 5 AGENTS READY</span>
+              <span className="text-emerald-400 font-medium">محمد قرمان</span>
             </div>
           </div>
         </div>
 
-        {/* Operational Actions */}
+        {/* Navigation & Section Switches */}
+        <div className="hidden md:flex items-center gap-1 bg-white/[0.03] p-1 rounded-2xl border border-white/5">
+          <button
+            onClick={() => onSelectMainView('deck')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+              activeMainView === 'deck'
+                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold'
+                : 'text-zinc-400 hover:text-white'
+            }`}
+          >
+            غرفة التحكم الرئيسية
+          </button>
+
+          <button
+            onClick={() => onSelectMainView('vault_browser')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+              activeMainView === 'vault_browser'
+                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold'
+                : 'text-zinc-400 hover:text-white'
+            }`}
+          >
+            <FolderKanban className="h-3.5 w-3.5 text-emerald-400" />
+            <span>المشاريع وObsidian</span>
+          </button>
+
+          <button
+            onClick={() => onSelectMainView('accounts')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+              activeMainView === 'accounts'
+                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold'
+                : 'text-zinc-400 hover:text-white'
+            }`}
+          >
+            <KeyRound className="h-3.5 w-3.5 text-emerald-400" />
+            <span>خزينة الحسابات</span>
+          </button>
+
+          <button
+            onClick={() => onSelectMainView('swarm')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+              activeMainView === 'swarm'
+                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold'
+                : 'text-zinc-400 hover:text-white'
+            }`}
+          >
+            <Cpu className="h-3.5 w-3.5 text-emerald-400" />
+            <span>فريق الوكلاء</span>
+          </button>
+
+          <button
+            onClick={() => onSelectMainView('memory')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+              activeMainView === 'memory'
+                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold'
+                : 'text-zinc-400 hover:text-white'
+            }`}
+          >
+            <Brain className="h-3.5 w-3.5 text-emerald-400" />
+            <span>الملف والذاكرة</span>
+          </button>
+        </div>
+
+        {/* Operational Quick Actions */}
         <div className="flex items-center gap-2">
           
-          {/* Agent Swarm Deck Toggle */}
+          {/* Daily SITREP Trigger */}
           <button
-            onClick={() => {
-              tacticalAudio.playBlip();
-              onToggleSwarm();
-            }}
-            className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-telemetry transition-all active:scale-95 ${
-              activeMainView === 'swarm'
-                ? 'bg-cyan-950/80 border-cyan-500 text-cyan-200 font-bold shadow-[0_0_15px_rgba(6,182,212,0.3)]'
-                : 'bg-zinc-900/80 border craft-border text-zinc-300 hover:text-white hover:bg-zinc-800'
-            }`}
-            title="غرفة عمليات أسطول الوكلاء الذاتي (Agentic OS)"
-          >
-            <Cpu className="h-3.5 w-3.5 text-cyan-400" />
-            <span className="hidden sm:inline">أسطول الوكلاء</span>
-          </button>
-
-          {/* Watchdog Radar Alert Button */}
-          <button
-            onClick={() => {
-              tacticalAudio.playAlert();
-              onOpenWatchdog();
-            }}
-            className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-telemetry transition-all active:scale-95 ${
-              watchdogCount > 0
-                ? 'bg-amber-950/40 border-amber-500/50 text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.2)]'
-                : 'bg-zinc-900/60 border craft-border text-zinc-400 hover:text-zinc-200'
-            }`}
-            title="رادار الرقابة والمتابعة التكتيكية (ما نسيته المنظومة)"
-          >
-            <ShieldAlert className={`h-3.5 w-3.5 ${watchdogCount > 0 ? 'text-amber-400 animate-pulse' : 'text-zinc-400'}`} />
-            <span>الرقابة</span>
-            {watchdogCount > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-bold">
-                {watchdogCount}
-              </span>
-            )}
-          </button>
-
-          {/* Daily SITREP Briefing Trigger */}
-          <button
-            onClick={() => {
-              tacticalAudio.playConfirm();
-              onOpenBriefing();
-            }}
-            className="flex items-center gap-1.5 rounded-lg border border-emerald-500/40 bg-emerald-950/40 px-3 py-1.5 text-xs font-bold text-emerald-300 hover:bg-emerald-900/50 active:scale-95 transition-all shadow-sm"
-            title="إحاطة الموقف اليومي ومساءلة القائد"
+            onClick={onOpenBriefing}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-xs text-zinc-200 transition-all active:scale-95"
+            title="جلسة الانطلاق الصباحي واستخلاص المساء"
           >
             <CalendarCheck className="h-3.5 w-3.5 text-emerald-400" />
-            <span className="hidden sm:inline">إحاطة SITREP</span>
+            <span className="hidden sm:inline">إحاطة اليوم</span>
           </button>
 
-          {/* Mind Vault Toggle (عقلية القائد والذاكرة التراكمية) */}
+          {/* Watchdog Alert */}
+          {watchdogCount > 0 && (
+            <button
+              onClick={onOpenWatchdog}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-bold transition-all active:scale-95"
+              title="تنبيهات المتابعة والركود"
+            >
+              <ShieldAlert className="h-3.5 w-3.5 text-amber-400" />
+              <span>{watchdogCount}</span>
+            </button>
+          )}
+
+          {/* Voice Call */}
           <button
-            onClick={() => {
-              tacticalAudio.playBlip();
-              onToggleMindVault();
-            }}
-            className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-all active:scale-95 ${
-              activeMainView === 'vault'
-                ? 'bg-purple-950/60 border-purple-500/60 text-purple-200 font-bold shadow-md'
-                : 'bg-zinc-900/80 border craft-border text-zinc-300 hover:text-white hover:bg-zinc-800'
-            }`}
-            title="مستودع العقل والذاكرة التراكمية للقائد"
+            onClick={onOpenVoiceCall}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-xs font-semibold text-emerald-300 active:scale-95 transition-all"
+            title="محادثة صوتية سريعة مع المستشار"
           >
-            <Brain className="h-3.5 w-3.5 text-purple-400" />
-            <span className="hidden md:inline">مستودع العقل</span>
+            <PhoneCall className="h-3.5 w-3.5 text-emerald-400" />
+            <span className="hidden lg:inline">محادثة صوتية</span>
           </button>
 
-          {/* Hands-Free Voice Call */}
-          <button
-            onClick={() => {
-              tacticalAudio.playConfirm();
-              onOpenVoiceCall();
-            }}
-            className="flex items-center gap-1.5 rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-2.5 py-1.5 text-xs font-semibold text-cyan-300 hover:bg-cyan-500/20 active:scale-95 transition-all"
-            title="اتصال لاسلكي مباشر مع المستشار"
-          >
-            <PhoneCall className="h-3.5 w-3.5 text-cyan-400 animate-pulse" />
-            <span className="hidden lg:inline">مكالمة العمليات</span>
-          </button>
-
-          {/* Obsidian Vault Export */}
-          <button
-            onClick={() => {
-              tacticalAudio.playConfirm();
-              onExportMarkdown();
-            }}
-            className="hidden xl:flex items-center gap-1.5 rounded-lg border craft-border bg-zinc-900/60 px-2.5 py-1.5 text-xs font-telemetry text-zinc-300 hover:text-white hover:bg-zinc-800/80 active:scale-95 transition-all"
-            title="تصدير المقر إلى Obsidian Markdown Vault"
-          >
-            <FileDown className="h-3.5 w-3.5 text-zinc-400" />
-            <span>Obsidian</span>
-          </button>
-
-          {/* Settings Trigger */}
+          {/* Settings */}
           <button
             onClick={onOpenSettings}
-            className="rounded-lg border craft-border bg-zinc-900/80 p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 active:scale-95 transition-all"
-            title="إعدادات المنظومة ونموذج الذكاء الاصطناعي"
+            className="p-2 rounded-xl bg-white/[0.03] hover:bg-white/[0.08] border border-white/10 text-zinc-400 hover:text-white transition-all active:scale-95"
+            title="الإعدادات"
           >
             <Settings className="h-4 w-4" />
           </button>
 
-          {/* Security Lock Button */}
+          {/* Lock Screen */}
           <button
-            onClick={() => {
-              tacticalAudio.playAlert();
-              onLock();
-            }}
-            className="rounded-lg border craft-border bg-zinc-900/80 p-1.5 text-zinc-400 hover:text-rose-400 hover:bg-zinc-800 active:scale-95 transition-all"
-            title="قفل فوري لغرفة العمليات"
+            onClick={onLock}
+            className="p-2 rounded-xl bg-white/[0.03] hover:bg-rose-500/10 border border-white/10 text-zinc-400 hover:text-rose-400 transition-all active:scale-95"
+            title="قفل التطبيق"
           >
             <Lock className="h-4 w-4" />
           </button>
 
-          {/* Clock Display */}
-          <div className="hidden 2xl:flex items-center gap-2 pl-2 border-l craft-border text-xs font-telemetry text-zinc-400">
-            <span>{timeStr}</span>
-            <span className="text-[10px] text-zinc-600">GZA</span>
+          {/* Time display */}
+          <div className="hidden xl:block text-xs text-zinc-400 font-mono pr-2 border-r border-white/10">
+            {timeStr}
           </div>
 
         </div>

@@ -18,6 +18,8 @@ import { GraphifyRadarPanel } from './components/GraphifyRadarPanel';
 import { CommanderAIPanel } from './components/CommanderAIPanel';
 import { MindVaultPanel } from './components/MindVaultPanel';
 import { AgenticCommandDeck } from './components/agentic-os/AgenticCommandDeck';
+import { ProjectsVaultBrowser } from './components/ProjectsVaultBrowser';
+import { AccountsVaultPanel } from './components/AccountsVaultPanel';
 import { SITREPBriefingModal } from './components/SITREPBriefingModal';
 import { WatchdogDrawer } from './components/WatchdogDrawer';
 import { HandsFreeVoiceCall } from './components/HandsFreeVoiceCall';
@@ -32,9 +34,9 @@ export function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isBriefingOpen, setIsBriefingOpen] = useState(false);
   const [isWatchdogOpen, setIsWatchdogOpen] = useState(false);
-  const [activeMainView, setActiveMainView] = useState<'deck' | 'vault' | 'swarm'>('deck');
+  const [activeMainView, setActiveMainView] = useState<'deck' | 'vault_browser' | 'accounts' | 'swarm' | 'memory'>('deck');
   const [activeLayout, setActiveLayout] = useState<'tri-panel' | 'focused'>('tri-panel');
-  const [mobileTab, setMobileTab] = useState<'missions' | 'intel' | 'radar' | 'ai' | 'vault' | 'swarm'>('ai');
+  const [mobileTab, setMobileTab] = useState<'missions' | 'vault_browser' | 'accounts' | 'intel' | 'radar' | 'swarm' | 'memory' | 'ai'>('ai');
   const [isVoiceCallOpen, setIsVoiceCallOpen] = useState(false);
   const [incomingSharedText, setIncomingSharedText] = useState<string | null>(null);
 
@@ -413,7 +415,7 @@ export function App() {
   }
 
   return (
-    <div className="h-screen max-h-screen w-screen overflow-hidden bg-[#05070a] text-zinc-100 flex flex-col font-sans selection:bg-emerald-900/50 hud-grid-bg">
+    <div className="h-screen max-h-screen w-screen overflow-hidden bg-[#060913] text-zinc-100 flex flex-col font-sans selection:bg-emerald-500/20">
       {/* Header HUD */}
       <HeaderHUD
         onLock={() => setIsLocked(true)}
@@ -422,12 +424,14 @@ export function App() {
         onOpenWatchdog={() => setIsWatchdogOpen(true)}
         watchdogCount={watchdogAlerts.length}
         activeMainView={activeMainView}
-        onToggleMindVault={() =>
-          setActiveMainView((v) => (v === 'vault' ? 'deck' : 'vault'))
-        }
-        onToggleSwarm={() =>
-          setActiveMainView((v) => (v === 'swarm' ? 'deck' : 'swarm'))
-        }
+        onSelectMainView={(v) => {
+          setActiveMainView(v);
+          if (v === 'vault_browser') setMobileTab('vault_browser');
+          else if (v === 'accounts') setMobileTab('accounts');
+          else if (v === 'swarm') setMobileTab('swarm');
+          else if (v === 'memory') setMobileTab('memory');
+          else if (v === 'deck') setMobileTab('missions');
+        }}
         onExportMarkdown={() =>
           exportObsidianMarkdown({
             missions,
@@ -439,16 +443,20 @@ export function App() {
         }
         onOpenSettings={() => setIsSettingsOpen(true)}
         isOnline={isOnline}
-        activeLayout={activeLayout}
-        onToggleLayout={() =>
-          setActiveLayout((l) => (l === 'tri-panel' ? 'focused' : 'tri-panel'))
-        }
       />
 
       {/* Main Command Center Deck */}
       <main className="flex-1 min-h-0 p-2.5 sm:p-3 lg:p-3.5 pb-20 lg:pb-3.5 overflow-hidden w-full flex flex-col">
         {/* Desktop View */}
-        {activeMainView === 'vault' ? (
+        {activeMainView === 'vault_browser' ? (
+          <div className="hidden lg:flex flex-col h-full min-h-0 flex-1">
+            <ProjectsVaultBrowser />
+          </div>
+        ) : activeMainView === 'accounts' ? (
+          <div className="hidden lg:flex flex-col h-full min-h-0 flex-1">
+            <AccountsVaultPanel />
+          </div>
+        ) : activeMainView === 'memory' ? (
           <div className="hidden lg:flex flex-col h-full min-h-0 flex-1">
             <MindVaultPanel
               dossier={dossier}
@@ -544,6 +552,14 @@ export function App() {
             />
           )}
 
+          {mobileTab === 'vault_browser' && (
+            <ProjectsVaultBrowser />
+          )}
+
+          {mobileTab === 'accounts' && (
+            <AccountsVaultPanel />
+          )}
+
           {mobileTab === 'intel' && (
             <IntelDepotPanel
               items={intelItems}
@@ -563,7 +579,7 @@ export function App() {
             />
           )}
 
-          {mobileTab === 'vault' && (
+          {mobileTab === 'memory' && (
             <MindVaultPanel
               dossier={dossier}
               memories={memories}
