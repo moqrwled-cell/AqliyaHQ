@@ -18,6 +18,7 @@ import { CommanderAIPanel } from './components/CommanderAIPanel';
 import { HandsFreeVoiceCall } from './components/HandsFreeVoiceCall';
 import { SettingsModal } from './components/SettingsModal';
 import { MobileNav } from './components/MobileNav';
+import { QuickCaptureModal } from './components/QuickCaptureModal';
 import { exportObsidianMarkdown, exportPureJSON } from './lib/exportMarkdown';
 
 export function App() {
@@ -26,6 +27,25 @@ export function App() {
   const [activeLayout, setActiveLayout] = useState<'tri-panel' | 'focused'>('tri-panel');
   const [mobileTab, setMobileTab] = useState<'missions' | 'intel' | 'radar' | 'ai'>('ai');
   const [isVoiceCallOpen, setIsVoiceCallOpen] = useState(false);
+  const [incomingSharedText, setIncomingSharedText] = useState<string | null>(null);
+
+  // Handle incoming Android system share intent
+  useEffect(() => {
+    if ((window as any).__AQLIYA_INITIAL_SHARE__) {
+      setIncomingSharedText((window as any).__AQLIYA_INITIAL_SHARE__);
+      delete (window as any).__AQLIYA_INITIAL_SHARE__;
+    }
+
+    (window as any).onAqliyaSharedText = (text: string) => {
+      if (text && text.trim()) {
+        setIncomingSharedText(text.trim());
+      }
+    };
+
+    return () => {
+      delete (window as any).onAqliyaSharedText;
+    };
+  }, []);
 
   // Offline-First initial state loading
   const [missions, setMissions] = useState<Mission[]>(() => offlineStorage.get('missions', []));
@@ -357,6 +377,16 @@ export function App() {
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
       />
+
+      {/* Android System Direct Share Capture */}
+      {incomingSharedText && (
+        <QuickCaptureModal
+          initialText={incomingSharedText}
+          missions={missions}
+          onSave={handleAddIntelItem}
+          onClose={() => setIncomingSharedText(null)}
+        />
+      )}
 
       {/* Mobile Navigation */}
       <MobileNav

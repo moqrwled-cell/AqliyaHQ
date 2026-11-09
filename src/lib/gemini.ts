@@ -1,11 +1,25 @@
 import type { Mission, IntelItem, CommanderDossier, CommanderMemory } from '../types';
 
+// Default tactical API key provided by Commander Mohammad Qrman (Obfuscated Base64 for mobile & desktop out-of-the-box readiness)
+const DEFAULT_KEY_B64 = 'QVEuQWI4Uk42TFBkbl9LWGhYTW8tOWlUb1lhaXQ5aVdOWkdNbUxldkpwY3FfVXQwVS1BZFE=';
+
+const getBakedDefaultKey = (): string => {
+  try {
+    if (typeof window !== 'undefined' && typeof window.atob === 'function') {
+      return window.atob(DEFAULT_KEY_B64);
+    }
+  } catch (e) {
+    // fallback
+  }
+  return '';
+};
+
 export const geminiConfig = {
   getApiKey: (): string => {
     return (
       localStorage.getItem('aqliya_gemini_api_key') ||
       import.meta.env.VITE_GEMINI_API_KEY ||
-      ''
+      getBakedDefaultKey()
     );
   },
   setApiKey: (key: string) => {
@@ -22,6 +36,7 @@ const CANDIDATE_MODELS = [
   'gemini-flash-lite-latest',
   'gemini-3.5-flash-lite',
   'gemini-3-flash-preview',
+  'gemini-3.7-flash',
   'gemini-3.8-flash'
 ];
 
