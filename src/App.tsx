@@ -522,7 +522,7 @@ export function App() {
               </div>
             </div>
 
-            {/* Right Panel: Commander AI with Gemini 3.5 Flash */}
+            {/* Right Panel: Commander AI with Intelligence Core */}
             <div className="col-span-4 h-full min-h-0 flex flex-col">
               <CommanderAIPanel
                 messages={chatMessages}
@@ -530,9 +530,12 @@ export function App() {
                 intel={intelItems}
                 dossier={dossier}
                 memories={memories}
+                directives={directives}
+                battleLogs={battleLogs}
                 onSendMessage={handleAddChatMessage}
                 onOpenVoiceCall={() => setIsVoiceCallOpen(true)}
                 onOpenSettings={() => setIsSettingsOpen(true)}
+                onStateMutation={handleStateMutation}
               />
             </div>
           </div>
@@ -609,9 +612,12 @@ export function App() {
               intel={intelItems}
               dossier={dossier}
               memories={memories}
+              directives={directives}
+              battleLogs={battleLogs}
               onSendMessage={handleAddChatMessage}
               onOpenVoiceCall={() => setIsVoiceCallOpen(true)}
               onOpenSettings={() => setIsSettingsOpen(true)}
+              onStateMutation={handleStateMutation}
             />
           )}
         </div>

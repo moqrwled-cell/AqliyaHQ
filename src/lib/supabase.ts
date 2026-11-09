@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '../types/database.types';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://zydgpjqllgthkqabphth.supabase.co';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp5ZGdwanFsbGd0aGtxYWJwaHRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQwODA2MDksImV4cCI6MjEwOTY1NjYwOX0.rpWxWfDfRtGdjKo7NWmIY38F795r5w6sRIsgGaQo5n8';
+const supabaseUrl = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) || 'https://zydgpjqllgthkqabphth.supabase.co';
+const supabaseAnonKey = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_ANON_KEY) || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp5ZGdwanFsbGd0aGtxYWJwaHRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQwODA2MDksImV4cCI6MjEwOTY1NjYwOX0.rpWxWfDfRtGdjKo7NWmIY38F795r5w6sRIsgGaQo5n8';
 
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {

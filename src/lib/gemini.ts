@@ -8,6 +8,9 @@ const getBakedDefaultKey = (): string => {
     if (typeof window !== 'undefined' && typeof window.atob === 'function') {
       return window.atob(DEFAULT_KEY_B64);
     }
+    if (typeof Buffer !== 'undefined') {
+      return Buffer.from(DEFAULT_KEY_B64, 'base64').toString('utf-8');
+    }
   } catch (e) {
     // fallback
   }
@@ -16,14 +19,18 @@ const getBakedDefaultKey = (): string => {
 
 export const geminiConfig = {
   getApiKey: (): string => {
+    const local = typeof localStorage !== 'undefined' ? localStorage.getItem('aqliya_gemini_api_key') : null;
+    const envKey = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GEMINI_API_KEY) || (typeof process !== 'undefined' && process.env?.VITE_GEMINI_API_KEY);
     return (
-      localStorage.getItem('aqliya_gemini_api_key') ||
-      import.meta.env.VITE_GEMINI_API_KEY ||
+      local ||
+      envKey ||
       getBakedDefaultKey()
     );
   },
   setApiKey: (key: string) => {
-    localStorage.setItem('aqliya_gemini_api_key', key.trim());
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('aqliya_gemini_api_key', key.trim());
+    }
   },
   hasApiKey: (): boolean => {
     return Boolean(geminiConfig.getApiKey());

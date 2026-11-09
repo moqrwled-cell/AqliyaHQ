@@ -13,8 +13,9 @@ import {
   User,
   Lightbulb
 } from 'lucide-react';
-import type { ChatMessage, Mission, IntelItem, CommanderDossier, CommanderMemory } from '../types';
-import { askCommanderAI, geminiConfig } from '../lib/gemini';
+import type { ChatMessage, Mission, IntelItem, CommanderDossier, CommanderMemory, StrategicDirective, BattleLog } from '../types';
+import { geminiConfig } from '../lib/gemini';
+import { IntelligenceCoreEngine } from '../lib/intelligence-core/intelligenceCoreEngine';
 
 interface CommanderAIPanelProps {
   messages: ChatMessage[];
@@ -22,9 +23,12 @@ interface CommanderAIPanelProps {
   intel: IntelItem[];
   dossier: CommanderDossier | null;
   memories: CommanderMemory[];
+  directives?: StrategicDirective[];
+  battleLogs?: BattleLog[];
   onSendMessage: (msg: ChatMessage) => void;
   onOpenVoiceCall: () => void;
   onOpenSettings: () => void;
+  onStateMutation?: (type: string, payload: any) => Promise<void>;
 }
 
 export const CommanderAIPanel: React.FC<CommanderAIPanelProps> = ({
@@ -33,13 +37,17 @@ export const CommanderAIPanel: React.FC<CommanderAIPanelProps> = ({
   intel,
   dossier,
   memories,
+  directives = [],
+  battleLogs = [],
   onSendMessage,
   onOpenVoiceCall,
   onOpenSettings,
+  onStateMutation,
 }) => {
   const [inputText, setInputText] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [activeStageText, setActiveStageText] = useState('العقل المركزي: فحص النية وتنسيق الوكيل...');
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -63,20 +71,25 @@ export const CommanderAIPanel: React.FC<CommanderAIPanelProps> = ({
     };
     onSendMessage(userMsg);
 
-    // Call real Gemini API
+    // Call Intelligence Core Engine (8-Stage Pipeline)
     setIsGenerating(true);
+    setActiveStageText('العقل المركزي: فهم الطلب واسترجاع السياق المخصص...');
     try {
-      const reply = await askCommanderAI(userText, {
-        dossier,
+      const result = await IntelligenceCoreEngine.processRequest({
+        userPrompt: userText,
         missions,
         intel,
         memories,
+        directives,
+        dossier,
+        battleLogs,
+        onStateMutation,
       });
 
       const aiMsg: ChatMessage = {
         id: `ai-${Date.now()}`,
         role: 'assistant',
-        content: reply,
+        content: result.finalReportMarkdown,
         created_at: new Date().toISOString(),
       };
       onSendMessage(aiMsg);
@@ -84,7 +97,7 @@ export const CommanderAIPanel: React.FC<CommanderAIPanelProps> = ({
       onSendMessage({
         id: `err-${Date.now()}`,
         role: 'assistant',
-        content: `عذراً يا قائد، حدث خطأ أثناء الاتصال بالنموذج: ${e.message}`,
+        content: `عذراً يا قائد، حدث خطأ أثناء تشغيل العقل المركزي: ${e.message}`,
         created_at: new Date().toISOString(),
       });
     } finally {
@@ -236,9 +249,9 @@ export const CommanderAIPanel: React.FC<CommanderAIPanelProps> = ({
         ))}
 
         {isGenerating && (
-          <div className="flex items-center gap-2 p-3 rounded-2xl apple-glass-card text-emerald-300 text-xs animate-pulse max-w-[200px]">
-            <Sparkles className="h-4 w-4 animate-spin text-emerald-400" />
-            <span>المستشار يفكر ويستحضر الذاكرة...</span>
+          <div className="flex items-center gap-2 p-3 rounded-2xl apple-glass-card text-emerald-300 text-xs border border-emerald-500/20 max-w-sm">
+            <Sparkles className="h-4 w-4 animate-spin text-emerald-400 flex-shrink-0" />
+            <span className="font-medium">{activeStageText}</span>
           </div>
         )}
 
