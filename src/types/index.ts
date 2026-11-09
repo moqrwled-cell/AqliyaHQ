@@ -100,3 +100,24 @@ export interface ChatMessage {
   audio_url?: string | null;
   created_at: string;
 }
+
+export interface WatchdogAlert {
+  id: string;
+  pillar: 'projects' | 'intel' | 'directives' | 'life_routine';
+  severity: 'critical' | 'warning' | 'info';
+  title: string;
+  reason: string;
+  daysStale: number;
+  actionType: 'open_mission' | 'open_intel' | 'open_chat' | 'dismiss';
+  targetId?: string;
+  data?: any;
+}
+
+export interface LifeRoutineCheck {
+  id: string;
+  energyLevel: 'high' | 'medium' | 'low';
+  dailyFocus: string;
+  discoveryAnswer?: string;
+  discoveryQuestion?: string;
+  completedAt: string;
+}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { supabase, offlineStorage } from './lib/supabase';
 import type { 
   Mission, 
@@ -7,7 +7,8 @@ import type {
   CommanderDossier, 
   BattleLog, 
   ChatMessage,
-  CommanderMemory
+  CommanderMemory,
+  WatchdogAlert
 } from './types';
 import { HeaderHUD } from './components/HeaderHUD';
 import { SecurityLock } from './components/SecurityLock';
@@ -15,17 +16,24 @@ import { MissionsPanel } from './components/MissionsPanel';
 import { IntelDepotPanel } from './components/IntelDepotPanel';
 import { GraphifyRadarPanel } from './components/GraphifyRadarPanel';
 import { CommanderAIPanel } from './components/CommanderAIPanel';
+import { MindVaultPanel } from './components/MindVaultPanel';
+import { SITREPBriefingModal } from './components/SITREPBriefingModal';
+import { WatchdogDrawer } from './components/WatchdogDrawer';
 import { HandsFreeVoiceCall } from './components/HandsFreeVoiceCall';
 import { SettingsModal } from './components/SettingsModal';
 import { MobileNav } from './components/MobileNav';
 import { QuickCaptureModal } from './components/QuickCaptureModal';
 import { exportObsidianMarkdown, exportPureJSON } from './lib/exportMarkdown';
+import { scanSystemWatchdog } from './lib/watchdogEngine';
 
 export function App() {
   const [isLocked, setIsLocked] = useState(true);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isBriefingOpen, setIsBriefingOpen] = useState(false);
+  const [isWatchdogOpen, setIsWatchdogOpen] = useState(false);
+  const [activeMainView, setActiveMainView] = useState<'deck' | 'vault'>('deck');
   const [activeLayout, setActiveLayout] = useState<'tri-panel' | 'focused'>('tri-panel');
-  const [mobileTab, setMobileTab] = useState<'missions' | 'intel' | 'radar' | 'ai'>('ai');
+  const [mobileTab, setMobileTab] = useState<'missions' | 'intel' | 'radar' | 'ai' | 'vault'>('ai');
   const [isVoiceCallOpen, setIsVoiceCallOpen] = useState(false);
   const [incomingSharedText, setIncomingSharedText] = useState<string | null>(null);
 
@@ -133,12 +141,29 @@ export function App() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'intel_depot' }, () => {
         loadData();
       })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'commander_memories' }, () => {
+        loadData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'commander_dossier' }, () => {
+        loadData();
+      })
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
   }, []);
+
+  // Compute System Watchdog Alerts
+  const watchdogAlerts = useMemo(() => {
+    return scanSystemWatchdog({
+      missions,
+      intel: intelItems,
+      directives,
+      battleLogs,
+      memories,
+    });
+  }, [missions, intelItems, directives, battleLogs, memories]);
 
   const handleUpdateMission = async (updated: Partial<Mission> & { id: string }) => {
     setMissions((prev) =>
@@ -198,6 +223,139 @@ export function App() {
     }
   };
 
+  const handleAddMemory = async (memory: Omit<CommanderMemory, 'id' | 'created_at'>) => {
+    try {
+      const { data } = await (supabase.from('commander_memories') as any)
+        .insert({
+          content: memory.content,
+          memory_type: memory.memory_type,
+          context_tags: memory.context_tags,
+          importance: memory.importance,
+          mission_id: memory.mission_id || null,
+        })
+        .select()
+        .single();
+
+      if (data) {
+        setMemories((prev) => [data as CommanderMemory, ...prev]);
+        offlineStorage.save('memories', [data, ...memories]);
+      } else {
+        const localMem: CommanderMemory = {
+          ...memory,
+          id: `mem-local-${Date.now()}`,
+          created_at: new Date().toISOString(),
+        };
+        setMemories((prev) => [localMem, ...prev]);
+        offlineStorage.save('memories', [localMem, ...memories]);
+      }
+    } catch (e) {
+      console.warn('Fallback local memory save', e);
+      const localMem: CommanderMemory = {
+        ...memory,
+        id: `mem-local-${Date.now()}`,
+        created_at: new Date().toISOString(),
+      };
+      setMemories((prev) => [localMem, ...prev]);
+      offlineStorage.queueSyncAction({ table: 'commander_memories', type: 'insert', data: memory });
+    }
+  };
+
+  const handleDeleteMemory = async (id: string) => {
+    const updated = memories.filter((m) => m.id !== id);
+    setMemories(updated);
+    offlineStorage.save('memories', updated);
+    try {
+      await supabase.from('commander_memories').delete().eq('id', id);
+    } catch (e) {
+      offlineStorage.queueSyncAction({ table: 'commander_memories', type: 'delete', data: { id } });
+    }
+  };
+
+  const handleUpdateDossier = async (updated: Partial<CommanderDossier>) => {
+    if (dossier) {
+      const nextDossier = { ...dossier, ...updated, updated_at: new Date().toISOString() };
+      setDossier(nextDossier);
+      offlineStorage.save('dossier', nextDossier);
+      try {
+        await (supabase.from('commander_dossier') as any).update(updated).eq('id', dossier.id);
+      } catch (e) {
+        offlineStorage.queueSyncAction({ table: 'commander_dossier', type: 'update', data: updated });
+      }
+    } else {
+      const initialDossier: CommanderDossier = {
+        id: 'dossier-cmd-1',
+        callsign: 'القائد محمد',
+        vision_statement: updated.vision_statement || '',
+        core_skills: updated.core_skills || ['AI Agent Architecture', 'Full-stack Engineering'],
+        life_history_summary: updated.life_history_summary || '',
+        decision_principles: updated.decision_principles || [],
+        active_focus: updated.active_focus || '',
+        updated_at: new Date().toISOString(),
+      };
+      setDossier(initialDossier);
+      offlineStorage.save('dossier', initialDossier);
+      try {
+        await (supabase.from('commander_dossier') as any).upsert(initialDossier);
+      } catch (e) {
+        offlineStorage.queueSyncAction({ table: 'commander_dossier', type: 'insert', data: initialDossier });
+      }
+    }
+  };
+
+  const handleSaveBriefing = async (params: {
+    energyLevel: 'high' | 'medium' | 'low';
+    focusSummary: string;
+    discoveryAnswer?: string;
+    discoveryQuestion?: string;
+    newMemoryContent?: string;
+  }) => {
+    const isMorning = new Date().getHours() < 16;
+    const entryType = isMorning ? 'daily_brief' : 'debrief';
+    const energyLabel = params.energyLevel === 'high' ? 'طاقة مرتفعة ⚡' : params.energyLevel === 'medium' ? 'طاقة متوازنة ⚖️' : 'طاقة منخفضة 🛡️';
+    
+    const logTitle = isMorning ? `تقرير الانطلاق الصباحي (SITREP)` : `جلسة استخلاص المساء (Debrief)`;
+    const logDetails = `[مستوى الجاهزية]: ${energyLabel}\n[التركيز والهدف]: ${params.focusSummary}${
+      params.discoveryAnswer ? `\n[استكشاف الذات]: ${params.discoveryQuestion}\nالجواب: ${params.discoveryAnswer}` : ''
+    }`;
+
+    try {
+      const { data: newLog } = await (supabase.from('battle_logs') as any)
+        .insert({
+          entry_type: entryType,
+          title: logTitle,
+          details: logDetails,
+        })
+        .select()
+        .single();
+
+      if (newLog) {
+        setBattleLogs((prev) => [newLog as BattleLog, ...prev]);
+        offlineStorage.save('logs', [newLog, ...battleLogs]);
+      }
+    } catch (e) {
+      console.warn('Offline log save', e);
+    }
+
+    if (params.newMemoryContent && params.newMemoryContent.trim()) {
+      await handleAddMemory({
+        memory_type: 'fact',
+        content: params.newMemoryContent.trim(),
+        context_tags: ['discovery', 'sitrep', 'identity'],
+        importance: 8,
+        mission_id: null,
+      });
+    }
+
+    handleAddChatMessage({
+      id: `sitrep-log-${Date.now()}`,
+      role: 'assistant',
+      content: `🎯 **تم تسجيل إحاطة ${isMorning ? 'الصباح' : 'المساء'} بنجاح:**\n\n- **الحالة:** ${energyLabel}\n- **الهدف الحاسم:** ${params.focusSummary}\n${
+        params.newMemoryContent ? `- **ذاكرة مكتشفة:** تم توثيقها في العقل والذاكرة (Mind Vault).\n` : ''
+      }\nغرفة العمليات تتابع مسار التنفيذ الآن!`,
+      created_at: new Date().toISOString(),
+    });
+  };
+
   const handleAddChatMessage = (msg: ChatMessage) => {
     const updated = [...chatMessages, msg];
     setChatMessages(updated);
@@ -232,14 +390,13 @@ export function App() {
       <HeaderHUD
         onLock={() => setIsLocked(true)}
         onOpenVoiceCall={() => setIsVoiceCallOpen(true)}
-        onTriggerSITREP={() => {
-          handleAddChatMessage({
-            id: `sitrep-${Date.now()}`,
-            role: 'assistant',
-            content: `📊 **موجز الموقف التكتيكي (SITREP):**\n\n1. المهمة المحورية: **NexusOS Core** (${missions[0]?.progress_percent || 25}%)\n2. بنك الاستخبارات: **${intelItems.length}** روابط وحلول مسجلة.\n3. أولوية اليوم: التركيز على ${missions[0]?.current_focus || 'بناء المقر'}.\n\nأنت القائد، والهدف واضح. بالتوفيق!`,
-            created_at: new Date().toISOString(),
-          });
-        }}
+        onOpenBriefing={() => setIsBriefingOpen(true)}
+        onOpenWatchdog={() => setIsWatchdogOpen(true)}
+        watchdogCount={watchdogAlerts.length}
+        activeMainView={activeMainView}
+        onToggleMindVault={() =>
+          setActiveMainView((v) => (v === 'deck' ? 'vault' : 'deck'))
+        }
         onExportMarkdown={() =>
           exportObsidianMarkdown({
             missions,
@@ -260,62 +417,75 @@ export function App() {
       {/* Main Command Center Deck */}
       <main className="flex-1 min-h-0 p-2.5 sm:p-3 lg:p-3.5 pb-20 lg:pb-3.5 overflow-hidden w-full flex flex-col">
         {/* Desktop View */}
-        <div className="hidden lg:grid grid-cols-12 gap-3.5 h-full min-h-0 flex-1">
-          {/* Left Panel: Missions & NexusOS */}
-          <div className="col-span-4 h-full min-h-0 flex flex-col">
-            <MissionsPanel
-              missions={missions}
-              selectedMission={selectedMission}
-              intel={intelItems}
-              directives={directives}
-              onSelectMission={setSelectedMission}
-              onUpdateMission={handleUpdateMission}
-              onAddMission={handleAddMission}
+        {activeMainView === 'vault' ? (
+          <div className="hidden lg:flex flex-col h-full min-h-0 flex-1">
+            <MindVaultPanel
+              dossier={dossier}
+              memories={memories}
+              battleLogs={battleLogs}
+              onAddMemory={handleAddMemory}
+              onDeleteMemory={handleDeleteMemory}
+              onUpdateDossier={handleUpdateDossier}
             />
           </div>
-
-          {/* Center Panel: Intel Depot & Graphify Radar */}
-          <div className="col-span-4 h-full min-h-0 flex flex-col gap-3">
-            <div className="h-[48%] min-h-0 flex flex-col">
-              <IntelDepotPanel
-                items={intelItems}
+        ) : (
+          <div className="hidden lg:grid grid-cols-12 gap-3.5 h-full min-h-0 flex-1">
+            {/* Left Panel: Missions & NexusOS */}
+            <div className="col-span-4 h-full min-h-0 flex flex-col">
+              <MissionsPanel
                 missions={missions}
-                onAddItem={handleAddIntelItem}
-                onUpdateStatus={handleUpdateIntelStatus}
-              />
-            </div>
-            <div className="flex-1 min-h-0 flex flex-col">
-              <GraphifyRadarPanel
-                missions={missions}
+                selectedMission={selectedMission}
                 intel={intelItems}
                 directives={directives}
                 onSelectMission={setSelectedMission}
-                onTriggerGraphifyScan={() => {
-                  handleAddChatMessage({
-                    id: `scan-${Date.now()}`,
-                    role: 'assistant',
-                    content: 'تم تحديث رادار الأفكار المعرفي عبر محرك Graphify، وربط كافة العقد بالمشاريع والاستراتيجيات بنجاح.',
-                    created_at: new Date().toISOString(),
-                  });
-                }}
+                onUpdateMission={handleUpdateMission}
+                onAddMission={handleAddMission}
+              />
+            </div>
+
+            {/* Center Panel: Intel Depot & Graphify Radar */}
+            <div className="col-span-4 h-full min-h-0 flex flex-col gap-3">
+              <div className="h-[48%] min-h-0 flex flex-col">
+                <IntelDepotPanel
+                  items={intelItems}
+                  missions={missions}
+                  onAddItem={handleAddIntelItem}
+                  onUpdateStatus={handleUpdateIntelStatus}
+                />
+              </div>
+              <div className="flex-1 min-h-0 flex flex-col">
+                <GraphifyRadarPanel
+                  missions={missions}
+                  intel={intelItems}
+                  directives={directives}
+                  onSelectMission={setSelectedMission}
+                  onTriggerGraphifyScan={() => {
+                    handleAddChatMessage({
+                      id: `scan-${Date.now()}`,
+                      role: 'assistant',
+                      content: 'تم تحديث رادار الأفكار المعرفي عبر محرك Graphify، وربط كافة العقد بالمشاريع والاستراتيجيات بنجاح.',
+                      created_at: new Date().toISOString(),
+                    });
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Right Panel: Commander AI with Gemini 3.5 Flash */}
+            <div className="col-span-4 h-full min-h-0 flex flex-col">
+              <CommanderAIPanel
+                messages={chatMessages}
+                missions={missions}
+                intel={intelItems}
+                dossier={dossier}
+                memories={memories}
+                onSendMessage={handleAddChatMessage}
+                onOpenVoiceCall={() => setIsVoiceCallOpen(true)}
+                onOpenSettings={() => setIsSettingsOpen(true)}
               />
             </div>
           </div>
-
-          {/* Right Panel: Commander AI with Gemini 3.5 Flash */}
-          <div className="col-span-4 h-full min-h-0 flex flex-col">
-            <CommanderAIPanel
-              messages={chatMessages}
-              missions={missions}
-              intel={intelItems}
-              dossier={dossier}
-              memories={memories}
-              onSendMessage={handleAddChatMessage}
-              onOpenVoiceCall={() => setIsVoiceCallOpen(true)}
-              onOpenSettings={() => setIsSettingsOpen(true)}
-            />
-          </div>
-        </div>
+        )}
 
         {/* Mobile View */}
         <div className="lg:hidden h-[calc(100vh-140px)] min-h-0 overflow-hidden">
@@ -347,6 +517,17 @@ export function App() {
               directives={directives}
               onSelectMission={setSelectedMission}
               onTriggerGraphifyScan={() => {}}
+            />
+          )}
+
+          {mobileTab === 'vault' && (
+            <MindVaultPanel
+              dossier={dossier}
+              memories={memories}
+              battleLogs={battleLogs}
+              onAddMemory={handleAddMemory}
+              onDeleteMemory={handleDeleteMemory}
+              onUpdateDossier={handleUpdateDossier}
             />
           )}
 
@@ -387,6 +568,42 @@ export function App() {
           onClose={() => setIncomingSharedText(null)}
         />
       )}
+
+      {/* SITREP Morning Briefing & Debrief Modal */}
+      <SITREPBriefingModal
+        isOpen={isBriefingOpen}
+        onClose={() => setIsBriefingOpen(false)}
+        missions={missions}
+        intel={intelItems}
+        directives={directives}
+        memories={memories}
+        watchdogAlerts={watchdogAlerts}
+        onSaveBriefing={handleSaveBriefing}
+      />
+
+      {/* Autonomous Watchdog Drawer */}
+      <WatchdogDrawer
+        isOpen={isWatchdogOpen}
+        onClose={() => setIsWatchdogOpen(false)}
+        alerts={watchdogAlerts}
+        onSelectMission={(m) => {
+          setSelectedMission(m);
+          setIsWatchdogOpen(false);
+          setActiveMainView('deck');
+          setMobileTab('missions');
+        }}
+        onAskAI={(prompt) => {
+          handleAddChatMessage({
+            id: `watchdog-ai-${Date.now()}`,
+            role: 'user',
+            content: prompt,
+            created_at: new Date().toISOString(),
+          });
+          setIsWatchdogOpen(false);
+          setActiveMainView('deck');
+          setMobileTab('ai');
+        }}
+      />
 
       {/* Mobile Navigation */}
       <MobileNav
