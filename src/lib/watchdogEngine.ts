@@ -1,4 +1,6 @@
 import type { Mission, IntelItem, StrategicDirective, BattleLog, CommanderMemory, WatchdogAlert } from '../types';
+import { OfflineSyncEngine } from './offline-security/offlineSyncEngine';
+import { CryptoVaultEngine } from './offline-security/cryptoVaultEngine';
 
 export function scanSystemWatchdog(params: {
   missions: Mission[];
@@ -11,6 +13,49 @@ export function scanSystemWatchdog(params: {
   const alerts: WatchdogAlert[] = [];
   const now = new Date().getTime();
   const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
+  // 0. Scan Offline Sync & Security Vault
+  const syncStats = OfflineSyncEngine.getSyncStats();
+  if (syncStats.conflictCount > 0) {
+    alerts.push({
+      id: 'alert-sync-conflicts',
+      pillar: 'system_security',
+      severity: 'critical',
+      title: `تعارض في المزامنة غير المتصلة (${syncStats.conflictCount})`,
+      reason: `توجد ${syncStats.conflictCount} عمليات بها تعارض بيانات تحتاج اعتماد فض التعارض من القائد.`,
+      daysStale: 0,
+      actionType: 'resolve_conflict',
+      targetId: 'sync_conflicts',
+    });
+  }
+
+  if (syncStats.failedCount > 0) {
+    alerts.push({
+      id: 'alert-sync-failed',
+      pillar: 'system_security',
+      severity: 'warning',
+      title: `عمليات مزامنة معلقة تجاوزت المحاولات (${syncStats.failedCount})`,
+      reason: `توجد ${syncStats.failedCount} عمليات فشلت مزامنتها محلياً بسبب انقطاع الاتصال أو رفض الخادم.`,
+      daysStale: 0,
+      actionType: 'resolve_conflict',
+      targetId: 'sync_failed',
+    });
+  }
+
+  const lockout = CryptoVaultEngine.getLockoutState();
+  if (lockout.lockoutUntil && Date.now() < lockout.lockoutUntil) {
+    const sec = Math.ceil((lockout.lockoutUntil - Date.now()) / 1000);
+    alerts.unshift({
+      id: 'alert-security-lockout',
+      pillar: 'system_security',
+      severity: 'critical',
+      title: 'النظام في وضع القفل الأمني المشدد',
+      reason: `تم رصد محاولات إدخال خاطئة متكررة وتم قفل رمز الدخول مؤقتاً لحماية الحسابات والمفاتيح (${sec} ثانية متبقية).`,
+      daysStale: 0,
+      actionType: 'open_chat',
+      targetId: 'security',
+    });
+  }
 
   // 1. Scan Projects & Missions for Stagnation (> 48 hours without update)
   missions.forEach((m) => {

@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '../types/database.types';
+import { OfflineSyncEngine } from './offline-security/offlineSyncEngine';
 
 const supabaseUrl = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) || 'https://zydgpjqllgthkqabphth.supabase.co';
 const supabaseAnonKey = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_ANON_KEY) || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp5ZGdwanFsbGd0aGtxYWJwaHRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQwODA2MDksImV4cCI6MjEwOTY1NjYwOX0.rpWxWfDfRtGdjKo7NWmIY38F795r5w6sRIsgGaQo5n8';
@@ -16,7 +17,7 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   },
 });
 
-// Offline-First Local Storage Helpers
+// Offline-First Local Storage & Conflict-Aware Sync Helpers
 export const offlineStorage = {
   save: (key: string, data: any) => {
     try {
@@ -41,13 +42,23 @@ export const offlineStorage = {
   },
   queueSyncAction: (action: { table: string; type: 'insert' | 'update' | 'delete'; data: any }) => {
     try {
-      const queue = offlineStorage.get<any[]>('sync_queue', []);
-      queue.push({ ...action, timestamp: new Date().toISOString() });
-      offlineStorage.save('sync_queue', queue);
+      // 1. Maintain backward compatibility with legacy sync_queue
+      const legacyQueue = offlineStorage.get<any[]>('sync_queue', []);
+      legacyQueue.push({ ...action, timestamp: new Date().toISOString() });
+      offlineStorage.save('sync_queue', legacyQueue);
+
+      // 2. Enqueue into new sequence-aware & conflict-resilient engine
+      OfflineSyncEngine.enqueueAction(action.table, action.type, action.data);
     } catch (e) {
       console.error('Failed to queue offline action', e);
     }
   },
   getSyncQueue: () => offlineStorage.get<any[]>('sync_queue', []),
-  clearSyncQueue: () => offlineStorage.save('sync_queue', []),
+  clearSyncQueue: () => {
+    offlineStorage.save('sync_queue', []);
+    OfflineSyncEngine.clearAll();
+  },
+  // Engine extensions
+  getEngineStats: () => OfflineSyncEngine.getSyncStats(),
+  replayQueue: () => OfflineSyncEngine.replayQueue(),
 };

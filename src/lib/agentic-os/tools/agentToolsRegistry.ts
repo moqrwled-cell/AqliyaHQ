@@ -11,6 +11,8 @@ import { KnowledgeGraphEngine } from '../../memory-graph/knowledgeGraphEngine';
 import { askCommanderAI } from '../../gemini';
 import { ProjectLifeEngine } from '../../project-life/projectLifeEngine';
 import { OpportunityRadarEngine } from '../../opportunity-radar/opportunityRadarEngine';
+import { CryptoVaultEngine } from '../../offline-security/cryptoVaultEngine';
+import { OfflineSyncEngine } from '../../offline-security/offlineSyncEngine';
 
 export const ENHANCED_TOOL_REGISTRY: Record<string, EnhancedToolDefinition> = {
   // --------------------------------------------------------------------------
@@ -976,6 +978,121 @@ ${content.slice(0, 3000)}
             project: o.linkedProjectSlug || 'عام',
           })),
         },
+      };
+    },
+  },
+
+  // --------------------------------------------------------------------------
+  // 25. فحص وتدقيق أمان الخزينة والمزامنة (audit_security_vault)
+  // --------------------------------------------------------------------------
+  audit_security_vault: {
+    name: 'audit_security_vault',
+    nameAr: 'فحص وتدقيق أمان الخزينة والمزامنة المحلية',
+    description: 'يجري تدقيقاً أمنياً شاملاً لحالة تجزئة رمز الدخول، القفل المشدد، والتشفير المحلي بالـ AES-GCM وطابور المزامنة.',
+    category: 'system',
+    permissionLevel: 'read_only',
+    allowedAgents: ['watchdog_sentry', 'chief_of_staff', 'systems_dev'],
+    inputs: [],
+    outputDescription: 'تقرير التدقيق الأمني ومعدل السلامة التراكمي.',
+    requiresApproval: false,
+    execute: async (_args, ctx): Promise<AgentToolResult> => {
+      let accounts: any[] = [];
+      try {
+        if (typeof localStorage !== 'undefined') {
+          const raw = localStorage.getItem('aqliya_accounts_vault');
+          accounts = raw ? JSON.parse(raw) : [];
+        }
+      } catch {
+        // ignore
+      }
+
+      const encryptedCount = accounts.filter(
+        (a) => a.encrypted || CryptoVaultEngine.isEncrypted(a.secret)
+      ).length;
+
+      const syncStats = OfflineSyncEngine.getSyncStats();
+      const audit = CryptoVaultEngine.getSecurityAuditSummary(
+        accounts.length,
+        encryptedCount,
+        syncStats.pendingCount,
+        syncStats.conflictCount
+      );
+
+      return {
+        success: true,
+        summary: `تم إجراء التدقيق الأمني: التصنيف العام [${audit.overallSecurityRating}] • خوارزمية الرمز [${audit.pinAlgorithm}] • الحسابات المشفرة [${encryptedCount}/${accounts.length}]`,
+        data: {
+          audit,
+          syncStats,
+        },
+      };
+    },
+  },
+
+  // --------------------------------------------------------------------------
+  // 26. إدارة طابور المزامنة وفض التعارضات (manage_offline_sync)
+  // --------------------------------------------------------------------------
+  manage_offline_sync: {
+    name: 'manage_offline_sync',
+    nameAr: 'إدارة طابور المزامنة وفض التعارضات المحلية',
+    description: 'يدير طابور المزامنة غير المتصلة: استعلام الإحصائيات، إعادة محاولة الإرسال، أو فض التعارضات وفق أسبقية القائد.',
+    category: 'system',
+    permissionLevel: 'low_risk',
+    allowedAgents: ['systems_dev', 'chief_of_staff', 'watchdog_sentry'],
+    inputs: [
+      { name: 'action', type: 'string', description: 'الإجراء المطلوب: get_stats | replay_queue | resolve_conflict | clear_synced', required: true },
+      { name: 'actionId', type: 'string', description: 'معرف الإجراء المعارض (مطلوب عند resolve_conflict)', required: false },
+      { name: 'strategy', type: 'string', description: 'استراتيجية فض التعارض: commander_precedence | last_write_wins | remote_precedence', required: false },
+    ],
+    outputDescription: 'نتيجة إجراء المزامنة أو فض التعارض.',
+    requiresApproval: false,
+    execute: async (args, ctx): Promise<AgentToolResult> => {
+      const { action = 'get_stats', actionId, strategy = 'commander_precedence' } = args;
+
+      if (action === 'get_stats') {
+        const stats = OfflineSyncEngine.getSyncStats();
+        const pending = OfflineSyncEngine.getPendingActions();
+        const conflicts = OfflineSyncEngine.getConflicts();
+        return {
+          success: true,
+          summary: `إحصائيات المزامنة: ${stats.pendingCount} معلق، ${stats.syncedCount} مكتمل، ${stats.conflictCount} تعارض، حالة الاتصال: ${stats.isOnline ? 'متصل' : 'بدون اتصال'}`,
+          data: { stats, pending, conflicts },
+        };
+      }
+
+      if (action === 'replay_queue') {
+        const replayRes = await OfflineSyncEngine.replayQueue();
+        return {
+          success: true,
+          summary: `تمت إعادة إرسال الطابور: ${replayRes.replayed} مكتمل، ${replayRes.failed} فشل، ${replayRes.conflicts} تعارض`,
+          data: replayRes,
+        };
+      }
+
+      if (action === 'resolve_conflict') {
+        if (!actionId) {
+          return { success: false, summary: 'معرف الإجراء (actionId) مطلوب لفض التعارض' };
+        }
+        const resolution = OfflineSyncEngine.resolveConflict(actionId, null, strategy as any);
+        return {
+          success: true,
+          summary: `تم فض التعارض للإجراء [${actionId}] بنجاح وفق استراتيجية [${strategy}] لصالح [${resolution.winner}]`,
+          data: resolution,
+        };
+      }
+
+      if (action === 'clear_synced') {
+        const cleared = OfflineSyncEngine.clearSyncedHistory();
+        return {
+          success: true,
+          summary: `تم تنظيف سجل العمليات المزامنة بنجاح (حذف ${cleared} إجراء مكتمل)`,
+          data: { cleared },
+        };
+      }
+
+      return {
+        success: false,
+        summary: `إجراء غير مدعوم: ${action}`,
       };
     },
   },

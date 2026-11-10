@@ -103,12 +103,12 @@ export interface ChatMessage {
 
 export interface WatchdogAlert {
   id: string;
-  pillar: 'projects' | 'intel' | 'directives' | 'life_routine';
+  pillar: 'projects' | 'intel' | 'directives' | 'life_routine' | 'system_security';
   severity: 'critical' | 'warning' | 'info';
   title: string;
   reason: string;
   daysStale: number;
-  actionType: 'open_mission' | 'open_intel' | 'open_chat' | 'dismiss';
+  actionType: 'open_mission' | 'open_intel' | 'open_chat' | 'dismiss' | 'resolve_conflict';
   targetId?: string;
   data?: any;
 }
