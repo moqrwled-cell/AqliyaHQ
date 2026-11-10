@@ -15,3 +15,4 @@ export * from './tools/types';
 export * from './tools/safeFileOps';
 export * from './tools/agentToolsRegistry';
 export * from './tools/toolExecutionEngine';
+export * from './missionControlEngine';

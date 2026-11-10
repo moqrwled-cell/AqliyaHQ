@@ -17,11 +17,13 @@ import { AGENT_FLEET } from '../../lib/agentic-os/agentRegistry';
 interface TaskDAGVisualizerProps {
   dag: AgenticPlanDAG | null;
   onApproveTask: (task: AgentTaskNode) => void;
+  onSelectTask?: (task: AgentTaskNode) => void;
 }
 
 export const TaskDAGVisualizer: React.FC<TaskDAGVisualizerProps> = ({
   dag,
   onApproveTask,
+  onSelectTask,
 }) => {
   if (!dag || dag.tasks.length === 0) {
     return (
@@ -85,7 +87,8 @@ export const TaskDAGVisualizer: React.FC<TaskDAGVisualizerProps> = ({
             <React.Fragment key={task.id}>
               {/* Task Node Card */}
               <div
-                className={`relative rounded-xl border p-3.5 transition-all text-right ${
+                onClick={() => onSelectTask?.(task)}
+                className={`relative rounded-xl border p-3.5 transition-all text-right cursor-pointer hover:border-cyan-500/50 ${
                   task.status === 'in_progress'
                     ? 'border-cyan-500/70 bg-cyan-950/20 shadow-[0_0_20px_rgba(6,182,212,0.15)]'
                     : task.status === 'waiting_approval'
