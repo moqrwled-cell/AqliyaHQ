@@ -11,7 +11,8 @@ import {
   Circle,
   Sparkles,
   CalendarCheck,
-  ShieldAlert
+  ShieldAlert,
+  Compass
 } from 'lucide-react';
 
 interface HeaderHUDProps {
@@ -20,8 +21,8 @@ interface HeaderHUDProps {
   onOpenBriefing: () => void;
   onOpenWatchdog: () => void;
   watchdogCount: number;
-  activeMainView: 'deck' | 'vault_browser' | 'accounts' | 'swarm' | 'memory' | 'project_life';
-  onSelectMainView: (view: 'deck' | 'vault_browser' | 'accounts' | 'swarm' | 'memory' | 'project_life') => void;
+  activeMainView: 'deck' | 'vault_browser' | 'accounts' | 'swarm' | 'memory' | 'project_life' | 'opportunity_radar';
+  onSelectMainView: (view: 'deck' | 'vault_browser' | 'accounts' | 'swarm' | 'memory' | 'project_life' | 'opportunity_radar') => void;
   onExportMarkdown: () => void;
   onOpenSettings: () => void;
   isOnline: boolean;
@@ -105,6 +106,18 @@ export const HeaderHUD: React.FC<HeaderHUDProps> = ({
           >
             <FolderKanban className="h-3.5 w-3.5 text-emerald-400" />
             <span>المشاريع والحياة (19)</span>
+          </button>
+
+          <button
+            onClick={() => onSelectMainView('opportunity_radar')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+              activeMainView === 'opportunity_radar'
+                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold'
+                : 'text-zinc-400 hover:text-white'
+            }`}
+          >
+            <Compass className="h-3.5 w-3.5 text-emerald-400" />
+            <span>رادار الفرص والأفكار</span>
           </button>
 
           <button

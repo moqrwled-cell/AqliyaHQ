@@ -10,6 +10,7 @@ import { PersistentMemoryStore } from '../../memory-graph/memoryStore';
 import { KnowledgeGraphEngine } from '../../memory-graph/knowledgeGraphEngine';
 import { askCommanderAI } from '../../gemini';
 import { ProjectLifeEngine } from '../../project-life/projectLifeEngine';
+import { OpportunityRadarEngine } from '../../opportunity-radar/opportunityRadarEngine';
 
 export const ENHANCED_TOOL_REGISTRY: Record<string, EnhancedToolDefinition> = {
   // --------------------------------------------------------------------------
@@ -866,6 +867,115 @@ ${content.slice(0, 3000)}
         success: true,
         summary: `تم توليد الإحاطة الصباحية: ${sitrep.topPriorities.length} أولويات حاسمة و ${sitrep.criticalAttentionProjects.length} تنبيهات مشاريع`,
         data: sitrep,
+      };
+    },
+  },
+
+  // --------------------------------------------------------------------------
+  // 22. فحص وتقييم فكرة أو فرصة استثمارية (analyze_opportunity_idea)
+  // --------------------------------------------------------------------------
+  analyze_opportunity_idea: {
+    name: 'analyze_opportunity_idea',
+    nameAr: 'تقييم فكرة أو فرصة وفق المعايير الستة',
+    description: 'يحلل فكرة جديدة أو رابط ريلز، يقيم المشكلة والمستفيد والتكلفة والمخاطر، ويحسب معدل الجدوى التكتيكي.',
+    category: 'intel',
+    permissionLevel: 'low_risk',
+    allowedAgents: ['intel_scout', 'chief_of_staff'],
+    inputs: [
+      { name: 'title', type: 'string', description: 'عنوان الفكرة أو موضوع الرابط', required: true },
+      { name: 'problemSolved', type: 'string', description: 'المشكلة الحقيقية التي تحلها الفكرة', required: true },
+      { name: 'rawUrl', type: 'string', description: 'رابط المصدر (إن وجد)', required: false },
+      { name: 'projectSlug', type: 'string', description: 'المشروع المرتبط من مشاريع الـ 19', required: false },
+    ],
+    outputDescription: 'بطاقة تقييم الفرصة مع معدل الجدوى والحكم التكتيكي.',
+    requiresApproval: false,
+    execute: async (args, ctx): Promise<AgentToolResult> => {
+      const { title, problemSolved, rawUrl, projectSlug } = args;
+      if (!title || !problemSolved) {
+        return { success: false, summary: 'عنوان الفكرة والمشكلة المحلولة مطلوبان للتقييم' };
+      }
+
+      const opp = OpportunityRadarEngine.createOpportunity({
+        title,
+        problemSolved,
+        rawSourceUrl: rawUrl,
+        linkedProjectSlug: projectSlug,
+      });
+
+      return {
+        success: true,
+        summary: `تم تقييم الفكرة «${opp.title}»: معدل الجدوى ${opp.evaluation.overallViabilityScore}% [${opp.evaluation.verdict}]`,
+        data: opp,
+      };
+    },
+  },
+
+  // --------------------------------------------------------------------------
+  // 23. تحويل الفرصة إلى خطوة تنفيذية (convert_opportunity_action)
+  // --------------------------------------------------------------------------
+  convert_opportunity_action: {
+    name: 'convert_opportunity_action',
+    nameAr: 'تحويل الفرصة إلى خطوة مشروع أو ذاكرة معرفية',
+    description: 'يحول فرصة معتمدة من رادار الفرص إلى خطوة تنفيذية في مشروع قائم ويوثقها في الذاكرة المعرفية.',
+    category: 'projects',
+    permissionLevel: 'low_risk',
+    allowedAgents: ['chief_of_staff', 'systems_dev'],
+    inputs: [
+      { name: 'opportunityId', type: 'string', description: 'معرف الفرصة', required: true },
+      { name: 'targetProjectSlug', type: 'string', description: 'المشروع المستهدف إن لم يكن محدداً', required: false },
+    ],
+    outputDescription: 'نتيجة تحويل الفرصة وتحديث المشروع والذاكرة.',
+    requiresApproval: false,
+    execute: async (args, ctx): Promise<AgentToolResult> => {
+      const { opportunityId, targetProjectSlug } = args;
+      if (!opportunityId) return { success: false, summary: 'معرف الفرصة مطلوب للتحويل' };
+
+      const res = await OpportunityRadarEngine.convertOpportunity(opportunityId, targetProjectSlug);
+      return {
+        success: res.success,
+        summary: res.message,
+        data: res,
+      };
+    },
+  },
+
+  // --------------------------------------------------------------------------
+  // 24. مسح رادار الفرص والترتيب حسب الجدوى (scan_opportunity_radar)
+  // --------------------------------------------------------------------------
+  scan_opportunity_radar: {
+    name: 'scan_opportunity_radar',
+    nameAr: 'مسح واستعراض الفرص التكتيكية الواعدة',
+    description: 'يمسح بنك الفرص ويرتبها تنازلياً حسب معدل الجدوى التكتيكي التراكمي.',
+    category: 'intel',
+    permissionLevel: 'read_only',
+    allowedAgents: ['intel_scout', 'chief_of_staff', 'watchdog_sentry'],
+    inputs: [
+      { name: 'minViability', type: 'number', description: 'الحد الأدنى لمعدل الجدوى (الافتراضي: 70)', required: false },
+    ],
+    outputDescription: 'قائمة بأعلى الفرص جاذبية وجدوى.',
+    requiresApproval: false,
+    execute: async (args, ctx): Promise<AgentToolResult> => {
+      const { minViability = 70 } = args;
+      const all = OpportunityRadarEngine.getAllOpportunities();
+      const filtered = all
+        .filter((o) => o.evaluation.overallViabilityScore >= minViability)
+        .sort((a, b) => b.evaluation.overallViabilityScore - a.evaluation.overallViabilityScore);
+
+      const stats = OpportunityRadarEngine.getStats();
+
+      return {
+        success: true,
+        summary: `تم مسح رادار الفرص: وُجد ${filtered.length} فرصة تحقق معدل جدوى >= ${minViability}% (إجمالي الفرص: ${stats.totalOpportunities})`,
+        data: {
+          stats,
+          topOpportunities: filtered.map((o) => ({
+            id: o.id,
+            title: o.title,
+            score: o.evaluation.overallViabilityScore,
+            verdict: o.evaluation.verdict,
+            project: o.linkedProjectSlug || 'عام',
+          })),
+        },
       };
     },
   },
