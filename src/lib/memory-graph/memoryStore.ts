@@ -725,6 +725,56 @@ export class PersistentMemoryStore {
   }
 
   /**
+   * تسجيل قرار استراتيجي في طبقة Decision Memory
+   */
+  public static async recordDecision(params: {
+    decisionText: string;
+    rationale: string;
+    alternativesConsidered?: string[];
+    projectSlug?: string;
+    confidence?: number;
+  }): Promise<AnyMemoryEntry | null> {
+    const res = PersistentMemoryStore.addEntry('decisions', {
+      layer: 'decisions',
+      title: params.decisionText.slice(0, 60),
+      content: `${params.decisionText}\nالسبب والمبرر: ${params.rationale}`,
+      context: params.projectSlug ? `مشروع: ${params.projectSlug}` : 'قرار تكتيكي عام',
+      chosenOption: params.decisionText,
+      rejectedAlternatives: params.alternativesConsidered || [],
+      decisionPrinciplesApplied: ['السيادة والاستقلالية الميدانية', 'الصلابة وعدم الهشاشة'],
+      tags: ['decision', 'strategic', ...(params.projectSlug ? [params.projectSlug] : [])],
+      importance: 9,
+      provenance: 'commander_verdict',
+    } as any);
+
+    return res.entry || null;
+  }
+
+  /**
+   * تسجيل تجربة أو درس مستفاد في طبقة Experience Memory
+   */
+  public static async recordExperience(params: {
+    taskOrSituation: string;
+    outcome: 'success' | 'failure';
+    lessonLearned: string;
+    tags?: string[];
+  }): Promise<AnyMemoryEntry | null> {
+    const res = PersistentMemoryStore.addEntry('experience', {
+      layer: 'experience',
+      title: params.lessonLearned.slice(0, 60),
+      content: `الموقف: ${params.taskOrSituation}\nالنتيجة: ${params.outcome}\nالدرس المستفاد: ${params.lessonLearned}`,
+      errorType: params.outcome === 'failure' ? 'operational_slip' : undefined,
+      rootCause: params.taskOrSituation,
+      resolution: params.lessonLearned,
+      tags: ['experience', 'lesson', ...(params.tags || [])],
+      importance: 8,
+      provenance: 'debrief_session',
+    } as any);
+
+    return res.entry || null;
+  }
+
+  /**
    * كشف التكرار (Duplicate Detection Engine)
    */
   public static detectDuplicates(entry: AnyMemoryEntry): DuplicateDetectionResult {

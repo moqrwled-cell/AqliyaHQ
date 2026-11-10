@@ -2,8 +2,8 @@ import React from 'react';
 import { Target, Database, Compass, Bot, Plus, Brain, Cpu, KeyRound, FolderKanban } from 'lucide-react';
 
 interface MobileNavProps {
-  activeTab: 'missions' | 'vault_browser' | 'accounts' | 'intel' | 'radar' | 'swarm' | 'memory' | 'ai';
-  onSelectTab: (tab: 'missions' | 'vault_browser' | 'accounts' | 'intel' | 'radar' | 'swarm' | 'memory' | 'ai') => void;
+  activeTab: 'missions' | 'vault_browser' | 'accounts' | 'intel' | 'radar' | 'swarm' | 'memory' | 'ai' | 'project_life';
+  onSelectTab: (tab: 'missions' | 'vault_browser' | 'accounts' | 'intel' | 'radar' | 'swarm' | 'memory' | 'ai' | 'project_life') => void;
   onQuickCapture: () => void;
   onOpenVoiceCall: () => void;
 }

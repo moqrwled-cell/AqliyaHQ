@@ -9,6 +9,7 @@ import { supabase } from '../../supabase';
 import { PersistentMemoryStore } from '../../memory-graph/memoryStore';
 import { KnowledgeGraphEngine } from '../../memory-graph/knowledgeGraphEngine';
 import { askCommanderAI } from '../../gemini';
+import { ProjectLifeEngine } from '../../project-life/projectLifeEngine';
 
 export const ENHANCED_TOOL_REGISTRY: Record<string, EnhancedToolDefinition> = {
   // --------------------------------------------------------------------------
@@ -670,6 +671,201 @@ ${content.slice(0, 3000)}
         success: true,
         summary: `تم تقديم القرار للقائد: ${prompt}`,
         data: { prompt, options },
+      };
+    },
+  },
+
+  // --------------------------------------------------------------------------
+  // 17. فحص صحة وتشخيص المشاريع (audit_project_health)
+  // --------------------------------------------------------------------------
+  audit_project_health: {
+    name: 'audit_project_health',
+    nameAr: 'تشخيص صحة المشاريع والديون التقنية',
+    description: 'يفحص حالة أي من مشاريع القائد الـ 19 ويحسب مؤشر الصحة والمخاطر والخطوات المتبقية.',
+    category: 'projects',
+    permissionLevel: 'read_only',
+    allowedAgents: ['chief_of_staff', 'systems_dev', 'watchdog_sentry'],
+    inputs: [
+      { name: 'slug', type: 'string', description: 'معرّف المشروع أو اسمه المختصر (مثل: business-roma-cafe أو os-nexus-os)', required: false },
+    ],
+    outputDescription: 'تقرير تشخيصي مفصل يتضمن مؤشر الصحة، الديون التقنية، والمخاطر.',
+    requiresApproval: false,
+    execute: async (args, ctx): Promise<AgentToolResult> => {
+      const { slug } = args;
+      if (slug) {
+        const project = ProjectLifeEngine.getProject(slug);
+        if (!project) {
+          return { success: false, summary: `المشروع ${slug} غير موجود في السجل المركزي` };
+        }
+        return {
+          success: true,
+          summary: `تشخيص مشروع ${project.titleAr}: مؤشر الصحة ${project.healthIndex}/100، نسبة الإنجاز ${project.progressPercent}%`,
+          data: {
+            title: project.titleAr,
+            slug: project.slug,
+            healthIndex: project.healthIndex,
+            progressPercent: project.progressPercent,
+            techDebtCount: project.techDebt.length,
+            risksCount: project.risks.length,
+            stepsRemaining: project.steps.filter((s) => s.status !== 'completed').length,
+            currentFocus: project.currentFocus,
+          },
+        };
+      }
+
+      const all = ProjectLifeEngine.getAllProjects();
+      const needingAttention = ProjectLifeEngine.getProjectsRequiringAttention();
+      return {
+        success: true,
+        summary: `إجمالي المشاريع الموثقة: ${all.length}، مشاريع تتطلب تدخلاً: ${needingAttention.length}`,
+        data: {
+          totalProjects: all.length,
+          needingAttention: needingAttention.map((p) => ({ title: p.titleAr, slug: p.slug, health: p.healthIndex })),
+        },
+      };
+    },
+  },
+
+  // --------------------------------------------------------------------------
+  // 18. تحديث خطوات المشروع (update_project_step)
+  // --------------------------------------------------------------------------
+  update_project_step: {
+    name: 'update_project_step',
+    nameAr: 'إضافة أو إكمال خطوة في المشروع',
+    description: 'يحدث حالة خطوة تنفيذية أو يضيف خطوة جديدة لأحد مشاريع القائد.',
+    category: 'projects',
+    permissionLevel: 'low_risk',
+    allowedAgents: ['chief_of_staff', 'systems_dev'],
+    inputs: [
+      { name: 'projectSlug', type: 'string', description: 'معرف المشروع', required: true },
+      { name: 'title', type: 'string', description: 'عنوان الخطوة', required: true },
+      { name: 'status', type: 'string', description: 'حالة الخطوة: completed | in_progress | pending', required: false },
+    ],
+    outputDescription: 'المشروع بعد تحديث الخطوة.',
+    requiresApproval: false,
+    execute: async (args, ctx): Promise<AgentToolResult> => {
+      const { projectSlug, title, status = 'completed' } = args;
+      if (!projectSlug || !title) return { success: false, summary: 'معرف المشروع وعنوان الخطوة مطلوبان' };
+
+      const updated = ProjectLifeEngine.addOrUpdateStep(projectSlug, {
+        title,
+        status: status as any,
+        assigneeAgent: ctx.agentRole,
+      });
+
+      if (!updated) return { success: false, summary: `تعذر العثور على المشروع ${projectSlug}` };
+
+      return {
+        success: true,
+        summary: `تم تحديث الخطوة «${title}» في مشروع ${updated.titleAr} بنجاح`,
+        data: { project: updated.titleAr, progress: updated.progressPercent, health: updated.healthIndex },
+      };
+    },
+  },
+
+  // --------------------------------------------------------------------------
+  // 19. حسم وتسجيل قرار استراتيجي (record_strategic_decision)
+  // --------------------------------------------------------------------------
+  record_strategic_decision: {
+    name: 'record_strategic_decision',
+    nameAr: 'تقييم وتوثيق قرار استراتيجي',
+    description: 'يحلل معضلة في مشروع أو في الحياة، يقارن الخيارات بمبادئ القائد، ويوثق الحسم في Decision Memory.',
+    category: 'decisions',
+    permissionLevel: 'low_risk',
+    allowedAgents: ['chief_of_staff', 'systems_dev', 'watchdog_sentry'],
+    inputs: [
+      { name: 'title', type: 'string', description: 'عنوان القرار أو المعضلة', required: true },
+      { name: 'dilemma', type: 'string', description: 'شرح المأزق أو المفترق', required: true },
+      { name: 'projectSlug', type: 'string', description: 'المشروع المرتبط إن وجد', required: false },
+    ],
+    outputDescription: 'دراسة الخيارات وتوصية المحرك التكتيكية.',
+    requiresApproval: false,
+    execute: async (args, ctx): Promise<AgentToolResult> => {
+      const { title, dilemma, projectSlug } = args;
+      if (!title || !dilemma) return { success: false, summary: 'عنوان المعضلة وشرحها مطلوبان' };
+
+      const decisionCase = ProjectLifeEngine.evaluateDilemma({
+        title,
+        dilemmaDescription: dilemma,
+        projectSlug,
+        rawOptions: [
+          {
+            title: 'الخيار السيادي المحلي (Local & Resilient)',
+            description: 'الاعتماد على الموارد المحلية والتخزين المستقل بدون تبعيات سحابية هشة.',
+            pros: ['أمان تام', 'استقلالية كاملة عن الإنترنت', 'صفر تكلفة إضافية'],
+            cons: ['يتطلب جهداً برمجياً محلياً'],
+            risks: ['إدارة النسخ الاحتياطي اليدوي'],
+          },
+          {
+            title: 'الخيار السحابي الخارجي (External SaaS)',
+            description: 'استخدام خدمات جاهزة مدفوعة وسحابية.',
+            pros: ['إعداد سريع'],
+            cons: ['تكاليف مستمرة واشتراكات', 'ارتهان لشبكة الإنترنت والسياسات الخارجية'],
+            risks: ['انقطاع الخدمة أو حظر الحسابات'],
+          },
+        ],
+      });
+
+      return {
+        success: true,
+        summary: `تم تقييم المعضلة «${title}»: التوصية بالخيار المعتمد (${decisionCase.tacticalRecommendation})`,
+        data: decisionCase,
+      };
+    },
+  },
+
+  // --------------------------------------------------------------------------
+  // 20. تسجيل التزام العادات والطاقة (log_life_habit_compliance)
+  // --------------------------------------------------------------------------
+  log_life_habit_compliance: {
+    name: 'log_life_habit_compliance',
+    nameAr: 'تثبيت التزام العادة والطاقة اليومية',
+    description: 'يسجل إنجاز إحدى عادات ركائز الحياة (صلاة الفجر، رياضة، قراءة جغرافيا، برمجة صامتة).',
+    category: 'life_ops',
+    permissionLevel: 'read_only',
+    allowedAgents: ['life_ops', 'chief_of_staff'],
+    inputs: [
+      { name: 'habitId', type: 'string', description: 'معرف العادة (مثل habit-fajr أو habit-workout)', required: true },
+    ],
+    outputDescription: 'حالة العادة وسلسلة الاستمرار Streak بعد التحديث.',
+    requiresApproval: false,
+    execute: async (args, ctx): Promise<AgentToolResult> => {
+      const { habitId } = args;
+      if (!habitId) return { success: false, summary: 'معرف العادة مطلوب' };
+
+      const updated = ProjectLifeEngine.toggleHabit(habitId);
+      if (!updated) return { success: false, summary: `العادة ${habitId} غير موجودة` };
+
+      return {
+        success: true,
+        summary: `تم تسجيل عادة «${updated.title}»: السلسلة الحالية ${updated.currentStreak} أيام 🔥`,
+        data: { habit: updated.title, currentStreak: updated.currentStreak, bestStreak: updated.bestStreak },
+      };
+    },
+  },
+
+  // --------------------------------------------------------------------------
+  // 21. إصدار الإحاطة الصباحية التكتيكية (generate_unified_sitrep)
+  // --------------------------------------------------------------------------
+  generate_unified_sitrep: {
+    name: 'generate_unified_sitrep',
+    nameAr: 'إصدار تقرير الإحاطة الصباحي الشامل',
+    description: 'يولد تقريراً موحداً يجمع طاقة اليوم، أعلى 3 أولويات، والمشاريع التي تحتاج حسم.',
+    category: 'system',
+    permissionLevel: 'read_only',
+    allowedAgents: ['chief_of_staff', 'life_ops'],
+    inputs: [
+      { name: 'energyLevel', type: 'string', description: 'مستوى الطاقة: high | medium | low', required: false },
+    ],
+    outputDescription: 'تقرير SITREP الميداني المعتمد.',
+    requiresApproval: false,
+    execute: async (args, ctx): Promise<AgentToolResult> => {
+      const { energyLevel = 'high' } = args;
+      const sitrep = ProjectLifeEngine.generateMorningSITREP(energyLevel as any);
+      return {
+        success: true,
+        summary: `تم توليد الإحاطة الصباحية: ${sitrep.topPriorities.length} أولويات حاسمة و ${sitrep.criticalAttentionProjects.length} تنبيهات مشاريع`,
+        data: sitrep,
       };
     },
   },

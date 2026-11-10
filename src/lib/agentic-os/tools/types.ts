@@ -11,6 +11,8 @@ export type ToolCategory =
   | 'memory' 
   | 'intel' 
   | 'logs' 
+  | 'decisions'
+  | 'life_ops'
   | 'system';
 
 export type ToolPermissionLevel = 

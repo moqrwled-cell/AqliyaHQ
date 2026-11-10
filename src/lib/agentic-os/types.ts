@@ -131,6 +131,7 @@ export type TaskDispatchStrategy =
   | 'hierarchical_nexus';   // قيادة مركزية بإشراف Nexus وتوزيع مهام متعدد على الوكلاء
 
 export interface AgentExecutionContext {
+  agentRole?: AgentRole;
   dossier: any;
   memories: any[];
   missions: any[];

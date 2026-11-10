@@ -19,6 +19,7 @@ import { CommanderAIPanel } from './components/CommanderAIPanel';
 import { MindVaultPanel } from './components/MindVaultPanel';
 import { AgenticCommandDeck } from './components/agentic-os/AgenticCommandDeck';
 import { ProjectsVaultBrowser } from './components/ProjectsVaultBrowser';
+import { ProjectLifeIntelligenceHub } from './components/project-life/ProjectLifeIntelligenceHub';
 import { AccountsVaultPanel } from './components/AccountsVaultPanel';
 import { SITREPBriefingModal } from './components/SITREPBriefingModal';
 import { WatchdogDrawer } from './components/WatchdogDrawer';
@@ -34,9 +35,9 @@ export function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isBriefingOpen, setIsBriefingOpen] = useState(false);
   const [isWatchdogOpen, setIsWatchdogOpen] = useState(false);
-  const [activeMainView, setActiveMainView] = useState<'deck' | 'vault_browser' | 'accounts' | 'swarm' | 'memory'>('deck');
+  const [activeMainView, setActiveMainView] = useState<'deck' | 'vault_browser' | 'accounts' | 'swarm' | 'memory' | 'project_life'>('deck');
   const [activeLayout, setActiveLayout] = useState<'tri-panel' | 'focused'>('tri-panel');
-  const [mobileTab, setMobileTab] = useState<'missions' | 'vault_browser' | 'accounts' | 'intel' | 'radar' | 'swarm' | 'memory' | 'ai'>('ai');
+  const [mobileTab, setMobileTab] = useState<'missions' | 'vault_browser' | 'accounts' | 'intel' | 'radar' | 'swarm' | 'memory' | 'ai' | 'project_life'>('ai');
   const [isVoiceCallOpen, setIsVoiceCallOpen] = useState(false);
   const [incomingSharedText, setIncomingSharedText] = useState<string | null>(null);
 
@@ -426,7 +427,8 @@ export function App() {
         activeMainView={activeMainView}
         onSelectMainView={(v) => {
           setActiveMainView(v);
-          if (v === 'vault_browser') setMobileTab('vault_browser');
+          if (v === 'project_life') setMobileTab('project_life');
+          else if (v === 'vault_browser') setMobileTab('vault_browser');
           else if (v === 'accounts') setMobileTab('accounts');
           else if (v === 'swarm') setMobileTab('swarm');
           else if (v === 'memory') setMobileTab('memory');
@@ -448,7 +450,11 @@ export function App() {
       {/* Main Command Center Deck */}
       <main className="flex-1 min-h-0 p-2.5 sm:p-3 lg:p-3.5 pb-20 lg:pb-3.5 overflow-hidden w-full flex flex-col">
         {/* Desktop View */}
-        {activeMainView === 'vault_browser' ? (
+        {activeMainView === 'project_life' ? (
+          <div className="hidden lg:flex flex-col h-full min-h-0 flex-1">
+            <ProjectLifeIntelligenceHub />
+          </div>
+        ) : activeMainView === 'vault_browser' ? (
           <div className="hidden lg:flex flex-col h-full min-h-0 flex-1">
             <ProjectsVaultBrowser />
           </div>
@@ -543,6 +549,10 @@ export function App() {
 
         {/* Mobile View */}
         <div className="lg:hidden h-[calc(100vh-140px)] min-h-0 overflow-hidden">
+          {mobileTab === 'project_life' && (
+            <ProjectLifeIntelligenceHub />
+          )}
+
           {mobileTab === 'missions' && (
             <MissionsPanel
               missions={missions}

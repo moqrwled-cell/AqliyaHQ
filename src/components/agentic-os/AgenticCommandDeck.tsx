@@ -30,7 +30,7 @@ import type {
 } from '../../lib/agentic-os/types';
 import { TaskDispatcher } from '../../lib/agentic-os/taskDispatcher';
 import { AgentExecutionBus } from '../../lib/agentic-os/agentExecutionBus';
-import { MissionControlEngine, WorkloadMetrics } from '../../lib/agentic-os/missionControlEngine';
+import { MissionControlEngine, type WorkloadMetrics } from '../../lib/agentic-os/missionControlEngine';
 import { AGENT_FLEET, getAgentByRole } from '../../lib/agentic-os/agentRegistry';
 import { AgentFleetCards } from './AgentFleetCards';
 import { TaskDAGVisualizer } from './TaskDAGVisualizer';

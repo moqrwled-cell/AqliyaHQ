@@ -20,8 +20,8 @@ interface HeaderHUDProps {
   onOpenBriefing: () => void;
   onOpenWatchdog: () => void;
   watchdogCount: number;
-  activeMainView: 'deck' | 'vault_browser' | 'accounts' | 'swarm' | 'memory';
-  onSelectMainView: (view: 'deck' | 'vault_browser' | 'accounts' | 'swarm' | 'memory') => void;
+  activeMainView: 'deck' | 'vault_browser' | 'accounts' | 'swarm' | 'memory' | 'project_life';
+  onSelectMainView: (view: 'deck' | 'vault_browser' | 'accounts' | 'swarm' | 'memory' | 'project_life') => void;
   onExportMarkdown: () => void;
   onOpenSettings: () => void;
   isOnline: boolean;
@@ -96,6 +96,18 @@ export const HeaderHUD: React.FC<HeaderHUDProps> = ({
           </button>
 
           <button
+            onClick={() => onSelectMainView('project_life')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+              activeMainView === 'project_life'
+                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold'
+                : 'text-zinc-400 hover:text-white'
+            }`}
+          >
+            <FolderKanban className="h-3.5 w-3.5 text-emerald-400" />
+            <span>المشاريع والحياة (19)</span>
+          </button>
+
+          <button
             onClick={() => onSelectMainView('vault_browser')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
               activeMainView === 'vault_browser'
@@ -103,8 +115,7 @@ export const HeaderHUD: React.FC<HeaderHUDProps> = ({
                 : 'text-zinc-400 hover:text-white'
             }`}
           >
-            <FolderKanban className="h-3.5 w-3.5 text-emerald-400" />
-            <span>المشاريع وObsidian</span>
+            <span>مستكشف Obsidian</span>
           </button>
 
           <button
