@@ -21,6 +21,7 @@ import { AgenticCommandDeck } from './components/agentic-os/AgenticCommandDeck';
 import { ProjectsVaultBrowser } from './components/ProjectsVaultBrowser';
 import { ProjectLifeIntelligenceHub } from './components/project-life/ProjectLifeIntelligenceHub';
 import { OpportunityRadarView } from './components/opportunity-radar/OpportunityRadarView';
+import { ExecutiveCommandCenter, type ExecutiveSection } from './components/executive/ExecutiveCommandCenter';
 import { AccountsVaultPanel } from './components/AccountsVaultPanel';
 import { SITREPBriefingModal } from './components/SITREPBriefingModal';
 import { WatchdogDrawer } from './components/WatchdogDrawer';
@@ -36,9 +37,9 @@ export function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isBriefingOpen, setIsBriefingOpen] = useState(false);
   const [isWatchdogOpen, setIsWatchdogOpen] = useState(false);
-  const [activeMainView, setActiveMainView] = useState<'deck' | 'vault_browser' | 'accounts' | 'swarm' | 'memory' | 'project_life' | 'opportunity_radar'>('deck');
+  const [activeMainView, setActiveMainView] = useState<'deck' | 'workspace' | 'vault_browser' | 'accounts' | 'swarm' | 'memory' | 'project_life' | 'opportunity_radar'>('deck');
   const [activeLayout, setActiveLayout] = useState<'tri-panel' | 'focused'>('tri-panel');
-  const [mobileTab, setMobileTab] = useState<'missions' | 'vault_browser' | 'accounts' | 'intel' | 'radar' | 'swarm' | 'memory' | 'ai' | 'project_life' | 'opportunity_radar'>('ai');
+  const [mobileTab, setMobileTab] = useState<'deck' | 'workspace' | 'missions' | 'vault_browser' | 'accounts' | 'intel' | 'radar' | 'swarm' | 'memory' | 'ai' | 'project_life' | 'opportunity_radar'>('deck');
   const [isVoiceCallOpen, setIsVoiceCallOpen] = useState(false);
   const [incomingSharedText, setIncomingSharedText] = useState<string | null>(null);
 
@@ -412,6 +413,36 @@ export function App() {
     offlineStorage.save('chat', next);
   };
 
+  const handleExecutiveSectionNavigation = (sec: ExecutiveSection) => {
+    if (sec === 'command_center') {
+      setActiveMainView('deck');
+      setMobileTab('deck');
+    } else if (sec === 'ai_advisor') {
+      setActiveMainView('workspace');
+      setMobileTab('ai');
+    } else if (sec === 'mission_control') {
+      setActiveMainView('swarm');
+      setMobileTab('swarm');
+    } else if (sec === 'projects' || sec === 'life_ops') {
+      setActiveMainView('project_life');
+      setMobileTab('project_life');
+    } else if (sec === 'opportunity_radar') {
+      setActiveMainView('opportunity_radar');
+      setMobileTab('opportunity_radar');
+    } else if (sec === 'knowledge_vault') {
+      setActiveMainView('vault_browser');
+      setMobileTab('vault_browser');
+    } else if (sec === 'memory') {
+      setActiveMainView('memory');
+      setMobileTab('memory');
+    } else if (sec === 'accounts') {
+      setActiveMainView('accounts');
+      setMobileTab('accounts');
+    } else if (sec === 'settings') {
+      setIsSettingsOpen(true);
+    }
+  };
+
   if (isLocked) {
     return <SecurityLock onUnlock={() => setIsLocked(false)} />;
   }
@@ -428,13 +459,14 @@ export function App() {
         activeMainView={activeMainView}
         onSelectMainView={(v) => {
           setActiveMainView(v);
-          if (v === 'project_life') setMobileTab('project_life');
+          if (v === 'deck') setMobileTab('deck');
+          else if (v === 'workspace') setMobileTab('missions');
+          else if (v === 'project_life') setMobileTab('project_life');
           else if (v === 'opportunity_radar') setMobileTab('opportunity_radar');
           else if (v === 'vault_browser') setMobileTab('vault_browser');
           else if (v === 'accounts') setMobileTab('accounts');
           else if (v === 'swarm') setMobileTab('swarm');
           else if (v === 'memory') setMobileTab('memory');
-          else if (v === 'deck') setMobileTab('missions');
         }}
         onExportMarkdown={() =>
           exportObsidianMarkdown({
@@ -452,7 +484,27 @@ export function App() {
       {/* Main Command Center Deck */}
       <main className="flex-1 min-h-0 p-2.5 sm:p-3 lg:p-3.5 pb-20 lg:pb-3.5 overflow-hidden w-full flex flex-col">
         {/* Desktop View */}
-        {activeMainView === 'opportunity_radar' ? (
+        {activeMainView === 'deck' ? (
+          <div className="hidden lg:flex flex-col h-full min-h-0 flex-1">
+            <ExecutiveCommandCenter
+              missions={missions}
+              intel={intelItems}
+              directives={directives}
+              dossier={dossier}
+              memories={memories}
+              battleLogs={battleLogs}
+              watchdogAlerts={watchdogAlerts}
+              onNavigateSection={handleExecutiveSectionNavigation}
+              onOpenVoiceCall={() => setIsVoiceCallOpen(true)}
+              onOpenBriefing={() => setIsBriefingOpen(true)}
+              onOpenWatchdog={() => setIsWatchdogOpen(true)}
+              onSwitchToTacticalWorkspace={() => {
+                setActiveMainView('workspace');
+                setMobileTab('missions');
+              }}
+            />
+          </div>
+        ) : activeMainView === 'opportunity_radar' ? (
           <div className="hidden lg:flex flex-col h-full min-h-0 flex-1">
             <OpportunityRadarView />
           </div>
@@ -555,6 +607,23 @@ export function App() {
 
         {/* Mobile View */}
         <div className="lg:hidden h-[calc(100vh-140px)] min-h-0 overflow-hidden">
+          {mobileTab === 'deck' && (
+            <ExecutiveCommandCenter
+              missions={missions}
+              intel={intelItems}
+              directives={directives}
+              dossier={dossier}
+              memories={memories}
+              battleLogs={battleLogs}
+              watchdogAlerts={watchdogAlerts}
+              onNavigateSection={handleExecutiveSectionNavigation}
+              onOpenVoiceCall={() => setIsVoiceCallOpen(true)}
+              onOpenBriefing={() => setIsBriefingOpen(true)}
+              onOpenWatchdog={() => setIsWatchdogOpen(true)}
+              onSwitchToTacticalWorkspace={() => setMobileTab('missions')}
+            />
+          )}
+
           {mobileTab === 'opportunity_radar' && (
             <OpportunityRadarView />
           )}

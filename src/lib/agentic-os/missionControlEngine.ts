@@ -108,7 +108,7 @@ export class MissionControlEngine {
   /**
    * احتساب مؤشرات الأداء واستهلاك الموارد الحقيقية (Real-time Math - No Mock)
    */
-  public static getWorkloadMetrics(activeDAG: AgenticPlanDAG | null): WorkloadMetrics {
+  public static getWorkloadMetrics(activeDAG: AgenticPlanDAG | null = null): WorkloadMetrics {
     const logStats = ExecutionLogsManager.getStats();
     const auditRecords = ToolExecutionEngine.getAuditRecords();
 
