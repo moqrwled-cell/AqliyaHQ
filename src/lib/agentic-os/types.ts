@@ -37,6 +37,8 @@ export interface AgentTaskNode {
   requiresHumanApproval: boolean;
   approvalGranted?: boolean;
   executionLogs: string[];
+  retryCount?: number;
+  durationMs?: number;
   createdAt: string;
   completedAt?: string;
 }
@@ -48,6 +50,7 @@ export interface AgenticPlanDAG {
   overallStatus: 'idle' | 'running' | 'paused' | 'completed' | 'failed';
   currentStepIndex: number;
   totalTokensUsed: number;
+  dispatchStrategy?: TaskDispatchStrategy;
   createdAt: string;
 }
 
@@ -76,6 +79,57 @@ export interface AgentToolResult {
   error?: string;
 }
 
+// ============================================================================
+// PHASE 4 ENHANCEMENTS: COMMUNICATION, DISPATCH, LOGS, & VERIFICATION
+// ============================================================================
+
+export type MessageType =
+  | 'intel_request'
+  | 'intel_response'
+  | 'architecture_spec'
+  | 'risk_assessment'
+  | 'life_constraint'
+  | 'synthesis_request'
+  | 'final_report';
+
+export interface AgentCommunicationMessage {
+  id: string;
+  sender: AgentRole;
+  recipient: AgentRole | 'all';
+  messageType: MessageType;
+  title: string;
+  payload: Record<string, any>;
+  taskId?: string;
+  timestamp: string;
+}
+
+export interface ExecutionLogEntry {
+  id: string;
+  taskId: string;
+  agent: AgentRole;
+  action: string;
+  status: 'started' | 'success' | 'failed' | 'retrying' | 'waiting_approval';
+  timestamp: string;
+  durationMs?: number;
+  retryCount?: number;
+  error?: string;
+  outputSnippet?: string;
+}
+
+export interface VerificationResult {
+  isValid: boolean;
+  confidence: number;
+  checksPassed: string[];
+  checksFailed: string[];
+  reason: string;
+  retrySuggested: boolean;
+}
+
+export type TaskDispatchStrategy = 
+  | 'single_agent'         // إسناد أحادي لوكيل تخصصي دون تشغيل الأسطول (منع الهدر)
+  | 'sequential_swarm'      // تشغيل متسلسل بحسب التبعيات
+  | 'hierarchical_nexus';   // قيادة مركزية بإشراف Nexus وتوزيع مهام متعدد على الوكلاء
+
 export interface AgentExecutionContext {
   dossier: any;
   memories: any[];
@@ -85,4 +139,6 @@ export interface AgentExecutionContext {
   dispatchTelemetry: (entry: Omit<TelemetryLogEntry, 'id' | 'timestamp'>) => void;
   requestApproval: (task: AgentTaskNode, reason: string) => Promise<boolean>;
   onStateMutation?: (type: string, payload: any) => Promise<void>;
+  sendMessage?: (msg: Omit<AgentCommunicationMessage, 'id' | 'timestamp'>) => void;
+  getThreadMessages?: (taskId: string) => AgentCommunicationMessage[];
 }
