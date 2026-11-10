@@ -378,6 +378,26 @@ export class KnowledgeGraphEngine {
   }
 
   /**
+   * جلب العقد من نوع محدد
+   */
+  public static getNodesByType(type: GraphNodeType): KnowledgeGraphNode[] {
+    const graph = KnowledgeGraphEngine.getGraph();
+    return graph.nodes.filter((n) => n.type === type);
+  }
+
+  /**
+   * البحث في العقد حسب الكلمة المفتاحية
+   */
+  public static findNodes(query: string): KnowledgeGraphNode[] {
+    const graph = KnowledgeGraphEngine.getGraph();
+    const lower = query.toLowerCase();
+    return graph.nodes.filter((n) => 
+      n.label.toLowerCase().includes(lower) || 
+      (n.subLabel && n.subLabel.toLowerCase().includes(lower))
+    );
+  }
+
+  /**
    * إحصائيات عقد وروابط الـ Knowledge Graph
    */
   public static getStats(): { totalNodes: number; totalEdges: number; nodesByType: Record<GraphNodeType, number> } {

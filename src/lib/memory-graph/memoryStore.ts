@@ -684,48 +684,44 @@ export class PersistentMemoryStore {
 
         // تطابق كامل في العنوان
         if (lowerTitle.includes(lowerQuery)) {
-          score += 50;
+          score += 10;
           matchedField = 'title';
-        }
-
-        // تطابق كامل في المحتوى
-        if (lowerContent.includes(lowerQuery)) {
-          score += 30;
+        } else if (lowerContent.includes(lowerQuery)) {
+          score += 6;
           matchedField = 'content';
-        }
-
-        // تطابق في الوسوم
-        if (lowerTags.includes(lowerQuery)) {
-          score += 25;
+        } else if (lowerTags.includes(lowerQuery)) {
+          score += 5;
           matchedField = 'tags';
-        }
-
-        // مطابقة كلمات مفتاحية جزئية
-        for (const token of queryTokens) {
-          if (lowerTitle.includes(token)) score += 10;
-          if (lowerContent.includes(token)) score += 5;
-          if (lowerTags.includes(token)) score += 8;
-        }
-
-        // فحص خطوات المشاريع إذا كان من طبقة projects
-        if (entry.layer === 'projects') {
-          const proj = entry as ProjectMemoryEntry;
-          for (const s of proj.steps) {
-            if (s.title.toLowerCase().includes(lowerQuery) || s.description.toLowerCase().includes(lowerQuery)) {
-              score += 20;
-              matchedField = 'step';
-            }
+        } else {
+          // تطابق جزئي بالكلمات
+          for (const token of queryTokens) {
+            if (lowerTitle.includes(token)) score += 3;
+            if (lowerContent.includes(token)) score += 2;
+            if (lowerTags.includes(token)) score += 1.5;
           }
         }
 
         if (score > 0) {
-          results.push({ entry, matchScore: score, matchedField });
+          results.push({
+            entry,
+            matchScore: score,
+            matchedField,
+          });
         }
       }
     }
 
-    // فرز النتائج تنازلياً حسب درجة التطابق والأهمية
-    return results.sort((a, b) => b.matchScore + b.entry.importance - (a.matchScore + a.entry.importance));
+    return results.sort((a, b) => b.matchScore - a.matchScore);
+  }
+
+  /**
+   * دالة ميسرة للبحث المباشر عن الذكريات
+   */
+  public static searchMemories(query: string, layer?: MemoryLayer): MemorySearchResult[] {
+    return PersistentMemoryStore.search({
+      query,
+      layers: layer ? [layer] : undefined,
+    });
   }
 
   /**

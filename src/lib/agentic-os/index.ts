@@ -11,3 +11,7 @@ export * from './taskDispatcher';
 export * from './executionManager';
 export * from './agentExecutionBus';
 export * from './taskDAGEngine';
+export * from './tools/types';
+export * from './tools/safeFileOps';
+export * from './tools/agentToolsRegistry';
+export * from './tools/toolExecutionEngine';
