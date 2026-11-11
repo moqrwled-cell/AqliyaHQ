@@ -83,7 +83,7 @@ export async function askCommanderAI(
 إذا طلب منك القائد أي تعديل على خطته اليومية (مثل: حساب السعرات، تغيير وجبة، إضافة كورس كورسيرا، إضافة مهمة كلاس روم، تعديل التمارين)، نفذ طلبه واشرح له الحسابات، ثم أضف في نهاية رسالتك حصراً كتلة إجرائية واحدة بالصيغة التالية ليقوم التطبيق بتنفيذها على الفور:
 \`\`\`plan_action
 {
-  "action": "update_calories" | "update_meal" | "add_meal" | "delete_meal" | "add_classroom_task" | "update_coursera" | "update_workout",
+  "action": "update_calories" | "update_meal" | "add_meal" | "delete_meal" | "add_classroom_task" | "update_coursera" | "update_workout" | "set_alarm",
   "data": {
     // لحساب السعرات: "calories": 3000, "targetWeight": 70
     // لتعديل وجبة: "mealId": "meal-morning", "title": "...", "calories": 500, "ingredients": "..."
@@ -91,6 +91,7 @@ export async function askCommanderAI(
     // لإضافة كورس: "courseTitle": "Google Project Management / Marketing"
     // لإضافة مهمة كلاس روم: "subject": "إدارة أعمال", "taskTitle": "...", "type": "assignment"
     // لتعديل تمرين: "title": "...", "exercises": ["..."]
+    // لضبط منبه: "time": "06:00", "label": "استيقاظ الفجر والنشاط", "tone": "military" | "radar" | "gentle" | "siren" | "cyber"
   }
 }
 \`\`\`

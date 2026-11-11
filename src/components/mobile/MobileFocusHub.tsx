@@ -26,12 +26,16 @@ import {
   PlusCircle,
   X,
   Zap,
-  Edit3
+  Edit3,
+  AlarmClock
 } from 'lucide-react';
 import { PersonalFocusEngine } from '../../lib/personal-focus/personalFocusEngine';
 import type { DailyPersonalPlan } from '../../lib/personal-focus/types';
 import { NotificationManager } from '../../lib/notifications/notificationManager';
 import { SystemUpdaterEngine } from '../../lib/updater/systemUpdaterEngine';
+import { AlarmManagerModal } from './AlarmManagerModal';
+import { ClassroomBridgeModal } from './ClassroomBridgeModal';
+import { AlarmRingingOverlay } from './AlarmRingingOverlay';
 
 export const MobileFocusHub: React.FC = () => {
   const [plan, setPlan] = useState<DailyPersonalPlan>(() => PersonalFocusEngine.getTodayPlan());
@@ -46,6 +50,8 @@ export const MobileFocusHub: React.FC = () => {
   const [showAddMealModal, setShowAddMealModal] = useState(false);
   const [showAddTaskModal, setShowAddTaskModal] = useState(false);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [showAlarmModal, setShowAlarmModal] = useState(false);
+  const [showClassroomModal, setShowClassroomModal] = useState(false);
   const [updateStatus, setUpdateStatus] = useState<string | null>(null);
 
   // Form states for manual additions
@@ -231,6 +237,14 @@ export const MobileFocusHub: React.FC = () => {
             </button>
 
             <button
+              onClick={() => setShowAlarmModal(true)}
+              className="p-2 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 hover:text-white transition-all active:scale-95"
+              title="منبه Moha الذكي (ضبط المنبه والنغمات)"
+            >
+              <AlarmClock className="h-4 w-4" />
+            </button>
+
+            <button
               onClick={() => {
                 setShowUpdateModal(true);
                 handleCheckUpdate();
@@ -312,13 +326,23 @@ export const MobileFocusHub: React.FC = () => {
           {/* Card A: College & Classroom Tasks */}
           <div className="p-4 rounded-3xl apple-glass border border-white/10 space-y-2.5">
             <div className="flex items-center justify-between pb-1.5 border-b border-white/5">
-              <button
-                onClick={() => setShowAddTaskModal(true)}
-                className="text-[11px] text-emerald-400 hover:underline flex items-center gap-1 font-bold"
-              >
-                <Plus className="h-3 w-3" />
-                <span>إضافة مهمة</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowClassroomModal(true)}
+                  className="px-2 py-1 rounded-xl bg-blue-500/15 border border-blue-500/30 text-blue-300 hover:text-white flex items-center gap-1 text-[10px] font-bold active:scale-95 transition-all"
+                  title="ربط واستيراد إعلانات كلاس روم"
+                >
+                  <Sparkles className="h-3 w-3" />
+                  <span>جسر كلاس روم</span>
+                </button>
+                <button
+                  onClick={() => setShowAddTaskModal(true)}
+                  className="text-[11px] text-emerald-400 hover:underline flex items-center gap-1 font-bold"
+                >
+                  <Plus className="h-3 w-3" />
+                  <span>إضافة مهمة</span>
+                </button>
+              </div>
               <div className="flex items-center gap-1.5 text-xs font-bold text-white">
                 <GraduationCap className="h-4 w-4 text-emerald-400" />
                 <span>الكلية والكلاس روم</span>
@@ -934,6 +958,22 @@ export const MobileFocusHub: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* MODAL 5: Alarm Manager (ضبط المنبه والنغمات) */}
+      <AlarmManagerModal 
+        isOpen={showAlarmModal} 
+        onClose={() => setShowAlarmModal(false)} 
+      />
+
+      {/* MODAL 6: Google Classroom Bridge & Importer */}
+      <ClassroomBridgeModal
+        isOpen={showClassroomModal}
+        onClose={() => setShowClassroomModal(false)}
+        onTaskAdded={() => setPlan(PersonalFocusEngine.getTodayPlan())}
+      />
+
+      {/* Full-Screen Alarm Ringing Overlay */}
+      <AlarmRingingOverlay />
 
     </div>
   );

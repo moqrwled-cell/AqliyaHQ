@@ -4,6 +4,7 @@
 
 import type { DailyPersonalPlan, TelegramSITREPMessage, WorkShiftDayType, PlanMutation } from './types';
 import { offlineStorage } from '../supabase';
+import { AlarmEngine } from '../alarm/alarmEngine';
 
 const STORAGE_KEY_PLAN = 'mohammad_daily_battle_plan_v1';
 const STORAGE_KEY_BACKUP = 'roma_cafe_debts_local_backup_v1';
@@ -428,6 +429,10 @@ export class PersonalFocusEngine {
       case 'update_workout':
         plan = this.updateWorkout(data.title, data.exercises, data.mobilityExercises);
         return { success: true, plan, message: `تم تحديث جدول التمرين: "${data.title}".` };
+
+      case 'set_alarm':
+        AlarmEngine.addAlarm(data.time, data.label || 'منبه مجدول', data.tone || 'military', Number(data.volume) || 0.85);
+        return { success: true, plan, message: `تم ضبط منبه الساعة ${data.time} بنجاح.` };
 
       default:
         return { success: false, plan, message: 'إجراء غير معروف.' };

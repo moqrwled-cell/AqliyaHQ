@@ -82,7 +82,8 @@ export type PlanMutationAction =
   | 'delete_classroom_task'
   | 'update_coursera'
   | 'update_workout'
-  | 'set_target_weight';
+  | 'set_target_weight'
+  | 'set_alarm';
 
 export interface PlanMutation {
   action: PlanMutationAction;

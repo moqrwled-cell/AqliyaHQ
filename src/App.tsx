@@ -29,6 +29,7 @@ import { HandsFreeVoiceCall } from './components/HandsFreeVoiceCall';
 import { SettingsModal } from './components/SettingsModal';
 import { MobileNav } from './components/MobileNav';
 import { MobileFocusHub } from './components/mobile/MobileFocusHub';
+import { AlarmRingingOverlay } from './components/mobile/AlarmRingingOverlay';
 import { QuickCaptureModal } from './components/QuickCaptureModal';
 import { exportObsidianMarkdown, exportPureJSON } from './lib/exportMarkdown';
 import { scanSystemWatchdog } from './lib/watchdogEngine';
@@ -787,6 +788,9 @@ export function App() {
         onQuickCapture={() => setMobileTab('intel')}
         onOpenVoiceCall={() => setIsVoiceCallOpen(true)}
       />
+
+      {/* Global Alarm Overlay (رنين المنبه في أي مكان بالتطبيق) */}
+      <AlarmRingingOverlay />
     </div>
   );
 }
