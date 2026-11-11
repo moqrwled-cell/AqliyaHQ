@@ -48,7 +48,11 @@
   }
 
   * {
-    font-family: 'Aqeeq', system-ui, -apple-system, BlinkMacSystemFont, sans-serif !important;
+    font-family: 'IBM Plex Sans Arabic', 'Cairo', system-ui, -apple-system, BlinkMacSystemFont, sans-serif !important;
+  }
+
+  code, pre, .font-mono, kbd {
+    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
   }
 
   html, body, #root {

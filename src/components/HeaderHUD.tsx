@@ -21,8 +21,8 @@ interface HeaderHUDProps {
   onOpenBriefing: () => void;
   onOpenWatchdog: () => void;
   watchdogCount: number;
-  activeMainView: 'deck' | 'workspace' | 'vault_browser' | 'accounts' | 'swarm' | 'memory' | 'project_life' | 'opportunity_radar';
-  onSelectMainView: (view: 'deck' | 'workspace' | 'vault_browser' | 'accounts' | 'swarm' | 'memory' | 'project_life' | 'opportunity_radar') => void;
+  activeMainView: 'focus' | 'deck' | 'workspace' | 'vault_browser' | 'accounts' | 'swarm' | 'memory' | 'project_life' | 'opportunity_radar';
+  onSelectMainView: (view: 'focus' | 'deck' | 'workspace' | 'vault_browser' | 'accounts' | 'swarm' | 'memory' | 'project_life' | 'opportunity_radar') => void;
   onExportMarkdown: () => void;
   onOpenSettings: () => void;
   isOnline: boolean;
@@ -85,6 +85,18 @@ export const HeaderHUD: React.FC<HeaderHUDProps> = ({
 
         {/* Navigation & Section Switches */}
         <div className="hidden md:flex items-center gap-1 bg-white/[0.03] p-1 rounded-2xl border border-white/5">
+          <button
+            onClick={() => onSelectMainView('focus')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+              activeMainView === 'focus'
+                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold'
+                : 'text-zinc-400 hover:text-white'
+            }`}
+          >
+            <Sparkles className="h-3.5 w-3.5 text-emerald-400" />
+            <span>خطة اليوم 🎯</span>
+          </button>
+
           <button
             onClick={() => onSelectMainView('deck')}
             className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${

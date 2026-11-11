@@ -28,6 +28,7 @@ import { WatchdogDrawer } from './components/WatchdogDrawer';
 import { HandsFreeVoiceCall } from './components/HandsFreeVoiceCall';
 import { SettingsModal } from './components/SettingsModal';
 import { MobileNav } from './components/MobileNav';
+import { MobileFocusHub } from './components/mobile/MobileFocusHub';
 import { QuickCaptureModal } from './components/QuickCaptureModal';
 import { exportObsidianMarkdown, exportPureJSON } from './lib/exportMarkdown';
 import { scanSystemWatchdog } from './lib/watchdogEngine';
@@ -37,9 +38,9 @@ export function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isBriefingOpen, setIsBriefingOpen] = useState(false);
   const [isWatchdogOpen, setIsWatchdogOpen] = useState(false);
-  const [activeMainView, setActiveMainView] = useState<'deck' | 'workspace' | 'vault_browser' | 'accounts' | 'swarm' | 'memory' | 'project_life' | 'opportunity_radar'>('deck');
+  const [activeMainView, setActiveMainView] = useState<'focus' | 'deck' | 'workspace' | 'vault_browser' | 'accounts' | 'swarm' | 'memory' | 'project_life' | 'opportunity_radar'>('deck');
   const [activeLayout, setActiveLayout] = useState<'tri-panel' | 'focused'>('tri-panel');
-  const [mobileTab, setMobileTab] = useState<'deck' | 'workspace' | 'missions' | 'vault_browser' | 'accounts' | 'intel' | 'radar' | 'swarm' | 'memory' | 'ai' | 'project_life' | 'opportunity_radar'>('deck');
+  const [mobileTab, setMobileTab] = useState<'focus' | 'deck' | 'workspace' | 'missions' | 'vault_browser' | 'accounts' | 'intel' | 'radar' | 'swarm' | 'memory' | 'ai' | 'project_life' | 'opportunity_radar'>('focus');
   const [isVoiceCallOpen, setIsVoiceCallOpen] = useState(false);
   const [incomingSharedText, setIncomingSharedText] = useState<string | null>(null);
 
@@ -484,7 +485,11 @@ export function App() {
       {/* Main Command Center Deck */}
       <main className="flex-1 min-h-0 p-2.5 sm:p-3 lg:p-3.5 pb-20 lg:pb-3.5 overflow-hidden w-full flex flex-col">
         {/* Desktop View */}
-        {activeMainView === 'deck' ? (
+        {activeMainView === 'focus' ? (
+          <div className="hidden lg:flex flex-col h-full min-h-0 flex-1 max-w-3xl mx-auto w-full">
+            <MobileFocusHub />
+          </div>
+        ) : activeMainView === 'deck' ? (
           <div className="hidden lg:flex flex-col h-full min-h-0 flex-1">
             <ExecutiveCommandCenter
               missions={missions}
@@ -607,6 +612,10 @@ export function App() {
 
         {/* Mobile View */}
         <div className="lg:hidden h-[calc(100vh-140px)] min-h-0 overflow-hidden">
+          {mobileTab === 'focus' && (
+            <MobileFocusHub />
+          )}
+
           {mobileTab === 'deck' && (
             <ExecutiveCommandCenter
               missions={missions}
