@@ -60,17 +60,18 @@ export const HeaderHUD: React.FC<HeaderHUDProps> = ({
         <div className="flex items-center gap-3">
           <button
             onClick={() => onSelectMainView('deck')}
-            className="flex h-9 w-9 items-center justify-center rounded-2xl bg-gradient-to-b from-emerald-400 to-emerald-600 text-zinc-950 shadow-[0_0_20px_rgba(16,185,129,0.3)] active:scale-95 transition-all"
+            className="relative flex h-10 w-10 items-center justify-center rounded-2xl overflow-hidden border border-emerald-400/40 shadow-[0_0_20px_rgba(16,185,129,0.35)] active:scale-95 transition-all bg-zinc-900"
+            title="Moha Agent"
           >
-            <Sparkles className="h-4.5 w-4.5 stroke-[2.5]" />
+            <img src="/logo.png" alt="Moha Agent" className="w-full h-full object-cover" />
           </button>
 
           <div className="text-right">
             <div className="flex items-center gap-2">
               <h1 className="text-base font-bold text-white tracking-tight">
-                عـقـلـيـة
+                Moha Agent
               </h1>
-              <span className="text-xs text-zinc-400 font-medium">| المساعد الشخصي الذكي</span>
+              <span className="text-xs text-zinc-400 font-medium">| المساعد التكتيكي الذكي</span>
             </div>
             <div className="flex items-center gap-2 text-[11px] text-zinc-400">
               <span className="flex items-center gap-1.5">

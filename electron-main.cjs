@@ -12,7 +12,7 @@ function createWindow() {
     height: 920,
     minWidth: 1024,
     minHeight: 700,
-    title: 'عقلية | AQLIYA HQ — غرفة العمليات التكتيكية',
+    title: 'Moha Agent | المساعد الشخصي الذكي',
     backgroundColor: '#09090b',
     transparent: false,
     frame: true,

@@ -2,7 +2,7 @@
 // AQLIYA HQ — MOHAMMAD PERSONAL FOCUS & BATTLE PLAN ENGINE
 // ============================================================================
 
-import type { DailyPersonalPlan, TelegramSITREPMessage, WorkShiftDayType } from './types';
+import type { DailyPersonalPlan, TelegramSITREPMessage, WorkShiftDayType, PlanMutation } from './types';
 import { offlineStorage } from '../supabase';
 
 const STORAGE_KEY_PLAN = 'mohammad_daily_battle_plan_v1';
@@ -210,10 +210,228 @@ export class PersonalFocusEngine {
   }
 
   /**
-   * تحديث خطة اليوم وحفظها
+   * تحديث خطة اليوم وحفظها وبث حدث التحديث
    */
   public static savePlan(plan: DailyPersonalPlan): void {
     offlineStorage.save(STORAGE_KEY_PLAN, plan);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('moha:plan-updated', { detail: plan }));
+    }
+  }
+
+  /**
+   * حساب الاحتياج اليومي الدقيق للسعرات والبروتين لبناء الوزن
+   */
+  public static calculateCalorieSurplus(
+    heightCm: number = 182,
+    currentWeightKg: number = 54,
+    targetWeightKg: number = 70,
+    age: number = 21
+  ): {
+    bmr: number;
+    maintenance: number;
+    targetSurplusCalories: number;
+    dailyProteinGrams: number;
+    explanationArabic: string;
+  } {
+    // Mifflin-St Jeor Formula for Men
+    const bmr = Math.round(10 * currentWeightKg + 6.25 * heightCm - 5 * age + 5);
+    // Activity factor for morning work + bodyweight training
+    const maintenance = Math.round(bmr * 1.45);
+    // Aggressive clean surplus for hardgainer (+700 kcal)
+    const targetSurplusCalories = maintenance + 700;
+    const dailyProteinGrams = Math.round(currentWeightKg * 2.1); // ~115g
+
+    return {
+      bmr,
+      maintenance,
+      targetSurplusCalories,
+      dailyProteinGrams,
+      explanationArabic: `بناءً على طولك (${heightCm} سم) ووزنك الحالي (${currentWeightKg} كجم) وعمرك (${age} سنة): معدل الحرق الأساسي (BMR) هو ${bmr} سعرة. مع نشاطك الحركي الصباحي، ثبات الوزن يتطلب ${maintenance} سعرة. لزيادة الوزن والوصول إلى ${targetWeightKg} كجم بنجاح، هدفك اليومي هو ${targetSurplusCalories} سعرة مع ${dailyProteinGrams} غرام بروتين.`,
+    };
+  }
+
+  /**
+   * تحديث هدف السعرات والوزن
+   */
+  public static updateCalories(targetCalories: number, targetWeightKg?: number): DailyPersonalPlan {
+    const plan = this.getTodayPlan();
+    plan.nutritionAndWorkout.targetCalories = targetCalories;
+    if (targetWeightKg) {
+      plan.nutritionAndWorkout.targetWeightKg = targetWeightKg;
+    }
+    this.savePlan(plan);
+    return plan;
+  }
+
+  /**
+   * تعديل وجبة محددة
+   */
+  public static updateMeal(
+    mealId: string,
+    updates: Partial<{ title: string; calories: number; ingredients: string; alternativeMeal: string }>
+  ): DailyPersonalPlan {
+    const plan = this.getTodayPlan();
+    const meal = plan.nutritionAndWorkout.meals.find((m) => m.id === mealId);
+    if (meal) {
+      if (updates.title) meal.title = updates.title;
+      if (updates.calories) meal.calories = updates.calories;
+      if (updates.ingredients) meal.ingredients = updates.ingredients;
+      if (updates.alternativeMeal) meal.alternativeMeal = updates.alternativeMeal;
+      this.savePlan(plan);
+    }
+    return plan;
+  }
+
+  /**
+   * إضافة وجبة جديدة
+   */
+  public static addMeal(meal: {
+    title: string;
+    calories: number;
+    ingredients: string;
+    alternativeMeal?: string;
+  }): DailyPersonalPlan {
+    const plan = this.getTodayPlan();
+    const newMeal = {
+      id: `meal-${Date.now()}`,
+      title: meal.title,
+      calories: meal.calories || 400,
+      ingredients: meal.ingredients,
+      alternativeMeal: meal.alternativeMeal || 'وجبة بديلة متوفرة بالمنزل',
+      completed: false,
+    };
+    plan.nutritionAndWorkout.meals.push(newMeal);
+    this.savePlan(plan);
+    return plan;
+  }
+
+  /**
+   * حذف وجبة
+   */
+  public static deleteMeal(mealId: string): DailyPersonalPlan {
+    const plan = this.getTodayPlan();
+    plan.nutritionAndWorkout.meals = plan.nutritionAndWorkout.meals.filter((m) => m.id !== mealId);
+    this.savePlan(plan);
+    return plan;
+  }
+
+  /**
+   * إضافة مهمة جديدة للكلاس روم
+   */
+  public static addClassroomTask(task: {
+    subject: string;
+    taskTitle: string;
+    dueDate?: string;
+    type?: 'lecture' | 'assignment' | 'exam' | 'face_to_face';
+  }): DailyPersonalPlan {
+    const plan = this.getTodayPlan();
+    const newTask = {
+      id: `cls-${Date.now()}`,
+      subject: task.subject || 'إدارة أعمال تكنولوجيا',
+      taskTitle: task.taskTitle,
+      dueDate: task.dueDate,
+      type: task.type || 'assignment',
+      completed: false,
+    };
+    plan.classroomTasks.push(newTask);
+    this.savePlan(plan);
+    return plan;
+  }
+
+  /**
+   * حذف مهمة كلاس روم
+   */
+  public static deleteClassroomTask(taskId: string): DailyPersonalPlan {
+    const plan = this.getTodayPlan();
+    plan.classroomTasks = plan.classroomTasks.filter((t) => t.id !== taskId);
+    this.savePlan(plan);
+    return plan;
+  }
+
+  /**
+   * تحديث كورس كورسيرا النشط
+   */
+  public static updateCourseraCourse(courseTitle: string): DailyPersonalPlan {
+    const plan = this.getTodayPlan();
+    plan.selfGrowth.courseraModuleTitle = courseTitle;
+    this.savePlan(plan);
+    return plan;
+  }
+
+  /**
+   * تحديث جدول التمرين اليومي
+   */
+  public static updateWorkout(
+    title: string,
+    exercises: string[],
+    mobilityExercises?: string[]
+  ): DailyPersonalPlan {
+    const plan = this.getTodayPlan();
+    plan.nutritionAndWorkout.workoutTitle = title;
+    if (exercises && exercises.length > 0) {
+      plan.nutritionAndWorkout.workoutExercises = exercises;
+    }
+    if (mobilityExercises && mobilityExercises.length > 0) {
+      plan.nutritionAndWorkout.mobilityExercises = mobilityExercises;
+    }
+    this.savePlan(plan);
+    return plan;
+  }
+
+  /**
+   * تطبيق تعديل شامل من المستشار الذكي (AI Mutation Dispatcher)
+   */
+  public static applyMutation(mutation: PlanMutation): { success: boolean; plan: DailyPersonalPlan; message: string } {
+    const { action, data } = mutation;
+    let plan = this.getTodayPlan();
+
+    switch (action) {
+      case 'update_calories':
+        plan = this.updateCalories(Number(data.calories), data.targetWeight ? Number(data.targetWeight) : undefined);
+        return { success: true, plan, message: `تم تحديث هدف السعرات إلى ${data.calories} سعرة يومياً.` };
+
+      case 'update_meal':
+        plan = this.updateMeal(data.mealId, data);
+        return { success: true, plan, message: `تم تحديث بيانات الوجبة بنجاح.` };
+
+      case 'add_meal':
+        plan = this.addMeal({
+          title: data.title,
+          calories: Number(data.calories) || 450,
+          ingredients: data.ingredients,
+          alternativeMeal: data.alternativeMeal,
+        });
+        return { success: true, plan, message: `تمت إضافة وجبة جديدة: "${data.title}" (+${data.calories} سعرة).` };
+
+      case 'delete_meal':
+        plan = this.deleteMeal(data.mealId);
+        return { success: true, plan, message: `تم حذف الوجبة بنجاح.` };
+
+      case 'add_classroom_task':
+        plan = this.addClassroomTask({
+          subject: data.subject || 'الكلية التطبيقية',
+          taskTitle: data.taskTitle,
+          dueDate: data.dueDate,
+          type: data.type || 'assignment',
+        });
+        return { success: true, plan, message: `تمت إضافة مهمة كلاس روم: "${data.taskTitle}".` };
+
+      case 'delete_classroom_task':
+        plan = this.deleteClassroomTask(data.taskId);
+        return { success: true, plan, message: `تم حذف المهمة بنجاح.` };
+
+      case 'update_coursera':
+        plan = this.updateCourseraCourse(data.courseTitle);
+        return { success: true, plan, message: `تم تعيين كورس كورسيرا النشط: "${data.courseTitle}".` };
+
+      case 'update_workout':
+        plan = this.updateWorkout(data.title, data.exercises, data.mobilityExercises);
+        return { success: true, plan, message: `تم تحديث جدول التمرين: "${data.title}".` };
+
+      default:
+        return { success: false, plan, message: 'إجراء غير معروف.' };
+    }
   }
 
   /**

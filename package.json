@@ -1,5 +1,5 @@
 {
-  "name": "aqliyahq",
+  "name": "moha-agent",
   "private": true,
   "version": "1.0.0",
   "type": "module",
@@ -38,7 +38,7 @@
   },
   "build": {
     "appId": "com.aqliya.hq",
-    "productName": "AqliyaHQ",
+    "productName": "Moha Agent",
     "directories": {
       "output": "dist-electron"
     },

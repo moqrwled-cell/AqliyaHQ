@@ -19,10 +19,19 @@ import {
   ChevronDown,
   ChevronUp,
   RefreshCw,
-  Bell
+  Bell,
+  BellRing,
+  Calculator,
+  Plus,
+  PlusCircle,
+  X,
+  Zap,
+  Edit3
 } from 'lucide-react';
 import { PersonalFocusEngine } from '../../lib/personal-focus/personalFocusEngine';
 import type { DailyPersonalPlan } from '../../lib/personal-focus/types';
+import { NotificationManager } from '../../lib/notifications/notificationManager';
+import { SystemUpdaterEngine } from '../../lib/updater/systemUpdaterEngine';
 
 export const MobileFocusHub: React.FC = () => {
   const [plan, setPlan] = useState<DailyPersonalPlan>(() => PersonalFocusEngine.getTodayPlan());
@@ -32,8 +41,38 @@ export const MobileFocusHub: React.FC = () => {
   const [showAlternativeMeal, setShowAlternativeMeal] = useState<Record<string, boolean>>({});
   const [activeSubTab, setActiveSubTab] = useState<'today' | 'nexus' | 'college' | 'body'>('today');
 
+  // Modals state
+  const [showCalorieCalc, setShowCalorieCalc] = useState(false);
+  const [showAddMealModal, setShowAddMealModal] = useState(false);
+  const [showAddTaskModal, setShowAddTaskModal] = useState(false);
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [updateStatus, setUpdateStatus] = useState<string | null>(null);
+
+  // Form states for manual additions
+  const [customMealTitle, setCustomMealTitle] = useState('');
+  const [customMealCalories, setCustomMealCalories] = useState('450');
+  const [customMealIngredients, setCustomMealIngredients] = useState('');
+
+  const [customTaskTitle, setCustomTaskTitle] = useState('');
+  const [customTaskSubject, setCustomTaskSubject] = useState('إدارة أعمال تكنولوجيا');
+
+  const [notifGranted, setNotifGranted] = useState(() => NotificationManager.isPermissionGranted());
+
   useEffect(() => {
     setPlan(PersonalFocusEngine.getTodayPlan());
+    NotificationManager.startBackgroundRoutine();
+
+    // Listen to real-time plan updates from Commander AI or other components
+    const handlePlanUpdate = (e: any) => {
+      if (e.detail) {
+        setPlan({ ...e.detail });
+      }
+    };
+
+    window.addEventListener('moha:plan-updated', handlePlanUpdate);
+    return () => {
+      window.removeEventListener('moha:plan-updated', handlePlanUpdate);
+    };
   }, []);
 
   const handleToggleMeal = (id: string) => {
@@ -81,60 +120,141 @@ export const MobileFocusHub: React.FC = () => {
     setTimeout(() => setBackupStatus(null), 4000);
   };
 
-  const handleTestNotification = () => {
-    if ('Notification' in window) {
-      if (Notification.permission === 'granted') {
-        new Notification('عقلية | تذكير وجبة الطاقة 🥣', {
-          body: 'يا محمد، حان وقت وجبة السيريلاك أو الشوفان.. حافظ على استمراريتك نحو الـ 70 كجم!',
-          icon: '/logo.svg',
-        });
-      } else if (Notification.permission !== 'denied') {
-        Notification.requestPermission().then((permission) => {
-          if (permission === 'granted') {
-            new Notification('عقلية | تم تفعيل الإشعارات بنجاح 🫡', {
-              body: 'سأرسل لك تذكيرات الوجبات والمهام بانتظام على هاتفك.',
-            });
-          }
-        });
-      }
+  // Notification Permission Activator
+  const handleRequestNotifications = async () => {
+    const res = await NotificationManager.requestPermission();
+    setNotifGranted(res.granted);
+    if (res.granted) {
+      alert('تم تفعيل إشعارات الهاتف بنجاح! ستصلك تنبيهات الوجبات والتمارين والمهام بانتظام 🫡');
     } else {
-      alert('تم إرسال تنبيه تجريبي لهاتفك بنجاح!');
+      alert('يرجى السماح بالإشعارات من إعدادات المتصفح أو التطبيق.');
     }
   };
+
+  // Add Custom Meal
+  const handleAddCustomMeal = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!customMealTitle.trim()) return;
+    const updated = PersonalFocusEngine.addMeal({
+      title: customMealTitle.trim(),
+      calories: Number(customMealCalories) || 400,
+      ingredients: customMealIngredients.trim() || 'وجبة مخصصة بالمنزل',
+    });
+    setPlan({ ...updated });
+    setCustomMealTitle('');
+    setCustomMealIngredients('');
+    setShowAddMealModal(false);
+  };
+
+  // Add Classroom Task
+  const handleAddClassroomTask = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!customTaskTitle.trim()) return;
+    const updated = PersonalFocusEngine.addClassroomTask({
+      subject: customTaskSubject.trim(),
+      taskTitle: customTaskTitle.trim(),
+      type: 'assignment',
+    });
+    setPlan({ ...updated });
+    setCustomTaskTitle('');
+    setShowAddTaskModal(false);
+  };
+
+  // Apply 3000 Calorie Plan
+  const handleApplyCaloriePlan = (cals: number) => {
+    const updated = PersonalFocusEngine.updateCalories(cals, 70);
+    setPlan({ ...updated });
+    setShowCalorieCalc(false);
+    alert(`تم تعديل هدف السعرات اليومية في خطتك إلى ${cals} سعرة! 💪`);
+  };
+
+  // Check & Apply Live OTA Update
+  const handleCheckUpdate = async () => {
+    setUpdateStatus('جارٍ فحص التحديثات من المستودع...');
+    const res = await SystemUpdaterEngine.checkLatestUpdate();
+    if (res.error) {
+      setUpdateStatus(`تعذر فحص التحديثات: ${res.error}`);
+    } else if (res.latestCommit) {
+      setUpdateStatus(`أحدث نسخة: [${res.latestCommit.sha}] ${res.latestCommit.message}`);
+    }
+  };
+
+  const handleApplyUpdateReload = () => {
+    SystemUpdaterEngine.applyLiveReload();
+  };
+
+  const calorieData = PersonalFocusEngine.calculateCalorieSurplus(182, 54, 70, 21);
 
   return (
     <div className="flex flex-col h-full bg-[#060913] text-right font-sans select-none overflow-y-auto pb-24 px-3 sm:px-4 pt-3">
       
-      {/* 1. Header: Greeting & Work Shift Badge */}
+      {/* 1. Header: Brand Avatar & Quick Actions */}
       <div className="p-4 rounded-3xl apple-glass border border-white/10 mb-3 shadow-lg">
-        <div className="flex items-center justify-between gap-2 mb-2">
-          <button
-            onClick={handleCopyTelegramReport}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold active:scale-95 transition-all"
-            title="نسخ تقرير اليوم للتيليجرام"
-          >
-            {copiedReport ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Send className="h-3.5 w-3.5" />}
-            <span>{copiedReport ? 'تم النسخ للتيليجرام!' : 'تقرير التيليجرام'}</span>
-          </button>
+        <div className="flex items-center justify-between gap-3 mb-2.5">
+          
+          {/* Avatar & Title */}
+          <div className="flex items-center gap-2.5">
+            <div className="relative h-11 w-11 rounded-2xl overflow-hidden border border-emerald-400/40 shadow-md shadow-emerald-950/60 bg-zinc-900 flex-shrink-0">
+              <img src="/logo.png" alt="Moha Agent" className="w-full h-full object-cover" />
+              <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-500 border-2 border-zinc-950" />
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <h2 className="text-sm font-extrabold text-white">Moha Agent</h2>
+                <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/15 text-emerald-300 font-mono">v1.2</span>
+              </div>
+              <p className="text-[11px] text-zinc-400 font-medium">مرحباً يا بطل 🫡 • محمد قرمان</p>
+            </div>
+          </div>
 
-          <span className="text-xs text-zinc-400 font-medium">
-            مرحباً يا بطل 🫡 • محمد قرمان
-          </span>
+          {/* Quick Buttons: Telegram + Notification */}
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={handleCopyTelegramReport}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[11px] font-semibold active:scale-95 transition-all"
+              title="نسخ تقرير اليوم للتيليجرام"
+            >
+              {copiedReport ? <Check className="h-3 w-3 text-emerald-400" /> : <Send className="h-3 w-3" />}
+              <span>{copiedReport ? 'تم النسخ!' : 'تقرير'}</span>
+            </button>
+
+            <button
+              onClick={handleRequestNotifications}
+              className={`p-2 rounded-xl border transition-all active:scale-95 ${
+                notifGranted
+                  ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                  : 'bg-amber-500/20 text-amber-300 border-amber-500/40 animate-pulse'
+              }`}
+              title={notifGranted ? 'الإشعارات مفعلة' : 'اضغط لتفعيل إشعارات الهاتف'}
+            >
+              {notifGranted ? <BellRing className="h-4 w-4" /> : <Bell className="h-4 w-4" />}
+            </button>
+
+            <button
+              onClick={() => {
+                setShowUpdateModal(true);
+                handleCheckUpdate();
+              }}
+              className="p-2 rounded-xl bg-white/[0.04] border border-white/10 text-cyan-400 hover:text-white transition-all active:scale-95"
+              title="تحديث المنظومة وتطبيق التعديلات فورياً"
+            >
+              <Zap className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
-        <div className="flex items-center justify-between">
+        {/* Work Shift Badge & Quick Summary */}
+        <div className="flex items-center justify-between pt-2 border-t border-white/5">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-2xl bg-white/[0.04] border border-white/5 text-[11px] text-zinc-300">
             <Clock className="h-3.5 w-3.5 text-emerald-400" />
             <span className="font-medium">{plan.shiftBadge}</span>
           </div>
 
-          <button
-            onClick={handleTestNotification}
-            className="p-1.5 rounded-xl bg-white/[0.04] border border-white/10 text-zinc-400 hover:text-white"
-            title="فحص الإشعارات"
-          >
-            <Bell className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-2 text-[11px] text-zinc-400">
+            <span className="text-amber-400 font-mono font-bold">{plan.nutritionAndWorkout.targetCalories} kcal</span>
+            <span>•</span>
+            <span className="text-emerald-400 font-bold">هدف 70kg</span>
+          </div>
         </div>
       </div>
 
@@ -192,7 +312,13 @@ export const MobileFocusHub: React.FC = () => {
           {/* Card A: College & Classroom Tasks */}
           <div className="p-4 rounded-3xl apple-glass border border-white/10 space-y-2.5">
             <div className="flex items-center justify-between pb-1.5 border-b border-white/5">
-              <span className="text-[11px] text-zinc-400">إدارة أعمال تكنولوجيا</span>
+              <button
+                onClick={() => setShowAddTaskModal(true)}
+                className="text-[11px] text-emerald-400 hover:underline flex items-center gap-1 font-bold"
+              >
+                <Plus className="h-3 w-3" />
+                <span>إضافة مهمة</span>
+              </button>
               <div className="flex items-center gap-1.5 text-xs font-bold text-white">
                 <GraduationCap className="h-4 w-4 text-emerald-400" />
                 <span>الكلية والكلاس روم</span>
@@ -228,7 +354,7 @@ export const MobileFocusHub: React.FC = () => {
           {/* Card B: Nexus Legal Cold Email Targets */}
           <div className="p-4 rounded-3xl apple-glass border border-white/10 space-y-3">
             <div className="flex items-center justify-between pb-1.5 border-b border-white/5">
-              <span className="text-[11px] font-mono text-emerald-400">
+              <span className="text-[11px] font-mono text-emerald-400 font-bold">
                 {plan.nexusTargets.sentCount}/{plan.nexusTargets.dailyEmailTarget} إيميل
               </span>
               <div className="flex items-center gap-1.5 text-xs font-bold text-white">
@@ -238,7 +364,7 @@ export const MobileFocusHub: React.FC = () => {
             </div>
 
             <p className="text-xs text-zinc-300">
-              الهدف اليومي: إرسال 20 إيميل للمكاتب الأمريكية لعرض التجربة المجانية (Demo).
+              الهدف اليومي: إرسال 20 إيميل للمكاتب الأمريكية لعرض التجربة المجانية 14 يوماً.
             </p>
 
             <div className="p-2.5 rounded-2xl bg-white/[0.03] border border-white/5 space-y-1.5">
@@ -250,7 +376,7 @@ export const MobileFocusHub: React.FC = () => {
                   {copiedHook ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
                   <span>{copiedHook ? 'تم النسخ' : 'نسخ الإنجليزية'}</span>
                 </button>
-                <span className="text-zinc-400 font-medium">خطاف الرسالة القانونية المقترح:</span>
+                <span className="text-zinc-400 font-medium">خطاف الرسالة القانونية (ABA 512):</span>
               </div>
               <p className="text-[11px] text-zinc-300 font-mono text-left dir-ltr leading-relaxed bg-black/30 p-2 rounded-xl select-all">
                 {plan.nexusTargets.recommendedHook}
@@ -276,9 +402,24 @@ export const MobileFocusHub: React.FC = () => {
           {/* Card C: Nutrition & Dense Calorie Meals (54kg -> 70kg) */}
           <div className="p-4 rounded-3xl apple-glass border border-white/10 space-y-3">
             <div className="flex items-center justify-between pb-1.5 border-b border-white/5">
-              <span className="text-[11px] font-mono text-amber-400 font-bold">
-                الهدف: 70 كجم (الحالي 54)
-              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowCalorieCalc(true)}
+                  className="text-[10px] px-2 py-0.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-300 font-mono flex items-center gap-1"
+                  title="حاسبة السعرات"
+                >
+                  <Calculator className="h-3 w-3" />
+                  <span>{plan.nutritionAndWorkout.targetCalories} kcal</span>
+                </button>
+                <button
+                  onClick={() => setShowAddMealModal(true)}
+                  className="text-[11px] text-emerald-400 hover:underline flex items-center gap-1 font-bold"
+                >
+                  <Plus className="h-3 w-3" />
+                  <span>وجبة</span>
+                </button>
+              </div>
+
               <div className="flex items-center gap-1.5 text-xs font-bold text-white">
                 <Flame className="h-4 w-4 text-amber-400" />
                 <span>وجبات السعرات الكثيفة (بدون خلاط)</span>
@@ -350,52 +491,40 @@ export const MobileFocusHub: React.FC = () => {
                 <span className="text-[10px] text-emerald-400 font-mono">علمي لزيادة الكتلة</span>
               </div>
 
-              <ul className="space-y-1 text-[11px] text-zinc-300 pr-2 list-disc list-inside">
-                {plan.nutritionAndWorkout.workoutExercises.map((ex, i) => (
-                  <li key={i}>{ex}</li>
+              <div className="space-y-1.5 pr-2 border-r-2 border-emerald-500/40">
+                {plan.nutritionAndWorkout.workoutExercises.map((ex, idx) => (
+                  <p key={idx} className="text-[11px] text-zinc-300">
+                    • {ex}
+                  </p>
                 ))}
-              </ul>
+              </div>
 
               <div className="pt-2 border-t border-white/5 flex items-center justify-between">
+                <span className="text-[11px] text-amber-300 font-medium">10 دقائق استطالة مفاصل ومرونة</span>
                 <button
                   onClick={handleToggleWorkout}
-                  className={`w-full py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+                  className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition-all ${
                     plan.nutritionAndWorkout.workoutCompleted
-                      ? 'bg-emerald-500 text-zinc-950 shadow-md'
-                      : 'bg-white/[0.05] hover:bg-white/[0.1] text-zinc-200 border border-white/10'
+                      ? 'bg-emerald-500 text-zinc-950 border-emerald-400'
+                      : 'bg-white/[0.04] text-zinc-300 border-white/10'
                   }`}
                 >
-                  {plan.nutritionAndWorkout.workoutCompleted ? (
-                    <>
-                      <CheckCircle2 className="h-4 w-4" />
-                      <span>تم إنجاز تمرين وإطالات اليوم بنجاح! 💪</span>
-                    </>
-                  ) : (
-                    <>
-                      <Circle className="h-4 w-4" />
-                      <span>تسجيل إنجاز تمرين اليوم</span>
-                    </>
-                  )}
+                  {plan.nutritionAndWorkout.workoutCompleted ? 'تم إنجاز التمرين 💪' : 'تحديد كمنجز'}
                 </button>
               </div>
             </div>
           </div>
 
-          {/* Card E: Roma Cafe Instant Debt Backup */}
+          {/* Card E: Roma Cafe Persistent Backup */}
           <div className="p-4 rounded-3xl apple-glass border border-white/10 flex items-center justify-between gap-3">
             <div>
               <div className="flex items-center gap-2">
                 <Coffee className="h-4 w-4 text-amber-400" />
-                <h4 className="text-xs font-bold text-white">كافيه روما • تأمين الديون</h4>
+                <h4 className="text-xs font-bold text-white">كافيه روما (حماية الديون)</h4>
               </div>
               <p className="text-[11px] text-zinc-400 mt-0.5">
-                حفظ نسخة احتياطية محلية لحماية حسابات الكافيه
+                {backupStatus || (plan.romaCafeBackupDone ? 'تم أخذ نسخة احتياطية محلية مؤمنة للأبد' : 'احفظ نسخة محلية لتجنب فقدان البيانات أوفلاين')}
               </p>
-              {backupStatus && (
-                <p className="text-[10px] text-emerald-400 font-medium mt-1 animate-pulse">
-                  {backupStatus}
-                </p>
-              )}
             </div>
 
             <button
@@ -415,7 +544,7 @@ export const MobileFocusHub: React.FC = () => {
                 <h4 className="text-xs font-bold text-white">15 دقيقة إنجليزية + كورسيرا</h4>
               </div>
               <p className="text-[11px] text-zinc-400 mt-0.5">
-                استماع وتدريب لجمل الأعمال لرفع مستواك تلقائياً
+                {plan.selfGrowth.courseraModuleTitle}
               </p>
             </div>
 
@@ -446,7 +575,7 @@ export const MobileFocusHub: React.FC = () => {
             <div className="p-3 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-xs text-blue-200 space-y-1">
               <p className="font-bold">القاعدة الذهبية لتحقيق أول بيعة:</p>
               <p className="text-[11px] leading-relaxed">
-                لا تطلب من المحامي $199 مباشرة من أول رسالة! اعرض عليه تجربة مجانية 14 يوماً بدون بطاقة بنكية، أو فيديو توضيحي (Demo) يوضح كيف تعمل الأداة على الرام دون إنترنت لمنع تسريب أسرار الموكلين.
+                لا تطلب من المحامي $199 مباشرة من أول رسالة! اعرض عليه تجربة مجانية 14 يوماً بدون بطاقة بنكية، توضح كيف تعمل الأداة على الرام دون إنترنت لمنع تسريب أسرار الموكلين (ABA 512).
               </p>
             </div>
 
@@ -480,10 +609,19 @@ export const MobileFocusHub: React.FC = () => {
       {activeSubTab === 'college' && (
         <div className="space-y-3 animate-in fade-in duration-200">
           <div className="p-4 rounded-3xl apple-glass border border-white/10 space-y-3">
-            <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <GraduationCap className="h-4 w-4 text-emerald-400" />
-              <span>الكلية التطبيقية • كلاس روم</span>
-            </h3>
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => setShowAddTaskModal(true)}
+                className="px-3 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-bold flex items-center gap-1"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span>إضافة تكليف / محاضرة</span>
+              </button>
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <GraduationCap className="h-4 w-4 text-emerald-400" />
+                <span>الكلية التطبيقية • كلاس روم</span>
+              </h3>
+            </div>
 
             <p className="text-xs text-zinc-300 leading-relaxed">
               تخصص إدارة أعمال تكنولوجيا: مسح ومتابعة كافة المحاضرات والتكليفات واللقاءات الوجاهية.
@@ -497,16 +635,19 @@ export const MobileFocusHub: React.FC = () => {
                     <span className="text-[10px] text-zinc-400">{t.subject}</span>
                   </div>
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 font-mono">
-                    نشط
+                    {t.completed ? 'منجز' : 'نشط'}
                   </span>
                 </div>
               ))}
             </div>
 
-            <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-200">
-              <p className="font-bold">نصيحة الكلية:</p>
-              <p className="text-[11px] mt-0.5">
-                تفريغ أول 30 دقيقة بعد انتهاء دوام المدرسة الصباحي لمتابعة الكلاس روم يضمن تفوقك دون أي تراكمات.
+            <div className="p-3.5 rounded-2xl bg-white/[0.02] border border-white/5 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-white">مسار الشهادات في Coursera:</span>
+                <span className="text-[10px] text-emerald-400 font-mono">CV Builder</span>
+              </div>
+              <p className="text-xs text-emerald-300 font-medium">
+                {plan.selfGrowth.courseraModuleTitle}
               </p>
             </div>
           </div>
@@ -517,44 +658,278 @@ export const MobileFocusHub: React.FC = () => {
       {activeSubTab === 'body' && (
         <div className="space-y-3 animate-in fade-in duration-200">
           <div className="p-4 rounded-3xl apple-glass border border-white/10 space-y-3">
-            <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <Flame className="h-4 w-4 text-amber-400" />
-              <span>خطة البناء الجسدي وزيادة الوزن (من 54 إلى 70 كجم)</span>
-            </h3>
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => setShowCalorieCalc(true)}
+                className="px-3 py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-bold flex items-center gap-1.5"
+              >
+                <Calculator className="h-3.5 w-3.5" />
+                <span>حاسبة السعرات</span>
+              </button>
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <Flame className="h-4 w-4 text-amber-400" />
+                <span>خطة زيادة الوزن (من 54 إلى 70 كجم)</span>
+              </h3>
+            </div>
 
             <div className="p-3 rounded-2xl bg-white/[0.03] border border-white/5 space-y-2">
               <div className="flex items-center justify-between text-xs font-bold">
                 <span className="text-emerald-400">الوزن الحالي: 54 كجم</span>
-                <span className="text-zinc-400">الهدف الصيفي: 70 كجم</span>
+                <span className="text-zinc-400">الهدف: 70 كجم</span>
               </div>
               <div className="w-full bg-white/10 h-2 rounded-full overflow-hidden">
                 <div className="bg-gradient-to-r from-amber-400 to-emerald-400 h-full w-[35%]" />
               </div>
               <p className="text-[11px] text-zinc-400">
-                مطلوب زيادة +16 كجم عضل ومرونة بمعدل 0.5 إلى 0.75 كجم أسبوعياً.
+                الهدف اليومي: <strong>{plan.nutritionAndWorkout.targetCalories} سعرة</strong> و <strong>115 غرام بروتين</strong> لبناء كتلة ومرونة.
               </p>
             </div>
 
             <div className="space-y-2">
-              <h4 className="text-xs font-bold text-white">الأطعمة الأسهل سعرات في غزة دون خلاط:</h4>
+              <div className="flex items-center justify-between">
+                <button
+                  onClick={() => setShowAddMealModal(true)}
+                  className="text-xs text-emerald-400 font-bold hover:underline flex items-center gap-1"
+                >
+                  <Plus className="h-3 w-3" />
+                  <span>إضافة وجبة</span>
+                </button>
+                <h4 className="text-xs font-bold text-white">قائمة الوجبات النشطة اليوم:</h4>
+              </div>
+
               <div className="space-y-1.5 text-xs text-zinc-300">
-                <div className="p-2.5 rounded-xl bg-white/[0.02] border border-white/5 flex items-center justify-between">
-                  <span>سيريلاك أو شوفان بالحليب الدافئ والعسل</span>
-                  <span className="font-mono text-amber-400">~450 سعرة</span>
+                {plan.nutritionAndWorkout.meals.map((m) => (
+                  <div key={m.id} className="p-2.5 rounded-xl bg-white/[0.02] border border-white/5 flex items-center justify-between">
+                    <div>
+                      <p className="font-bold text-white">{m.title}</p>
+                      <p className="text-[10px] text-zinc-400">{m.ingredients}</p>
+                    </div>
+                    <span className="font-mono text-amber-400 text-xs">+{m.calories} سعرة</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 1: Calorie & Macronutrient Calculator */}
+      {showCalorieCalc && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xl p-4">
+          <div className="apple-glass-elevated w-full max-w-sm rounded-3xl p-5 border border-white/10 shadow-2xl space-y-3 text-right">
+            <div className="flex items-center justify-between pb-2 border-b border-white/5">
+              <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
+                <Calculator className="h-4 w-4 text-amber-400" />
+                <span>حاسبة الاحتياج العلمي الدقيق</span>
+              </h3>
+              <button onClick={() => setShowCalorieCalc(false)} className="text-zinc-400 hover:text-white">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="space-y-2 text-xs">
+              <div className="p-3 rounded-2xl bg-white/[0.03] border border-white/5 space-y-1.5">
+                <div className="flex justify-between">
+                  <span className="text-zinc-400">معدل الحرق الأساسي (BMR):</span>
+                  <span className="font-mono text-white font-bold">{calorieData.bmr} سعرة</span>
                 </div>
-                <div className="p-2.5 rounded-xl bg-white/[0.02] border border-white/5 flex items-center justify-between">
-                  <span>إضافة ملعقتين زيت زيتون بكر على غداء العائلة</span>
-                  <span className="font-mono text-amber-400">+240 سعرة</span>
+                <div className="flex justify-between">
+                  <span className="text-zinc-400">سعرات الثبات مع النشاط:</span>
+                  <span className="font-mono text-white font-bold">{calorieData.maintenance} سعرة</span>
                 </div>
-                <div className="p-2.5 rounded-xl bg-white/[0.02] border border-white/5 flex items-center justify-between">
-                  <span>5 حبات تمر + 50 غرام فستق محمص</span>
-                  <span className="font-mono text-amber-400">~400 سعرة</span>
+                <div className="flex justify-between pt-1 border-t border-white/5 text-emerald-400 font-bold">
+                  <span>الهدف لزيادة الوزن (+700 سعرة):</span>
+                  <span className="font-mono text-amber-400 font-bold">{calorieData.targetSurplusCalories} سعرة</span>
                 </div>
-                <div className="p-2.5 rounded-xl bg-white/[0.02] border border-white/5 flex items-center justify-between">
-                  <span>ساندويتش طحينة ودبس تمر مع رغيف خبز</span>
-                  <span className="font-mono text-amber-400">~380 سعرة</span>
+                <div className="flex justify-between text-blue-300">
+                  <span>البروتين اليومي المطلوب:</span>
+                  <span className="font-mono font-bold">{calorieData.dailyProteinGrams} غرام</span>
                 </div>
               </div>
+
+              <p className="text-[11px] text-zinc-300 leading-relaxed bg-black/30 p-2.5 rounded-xl border border-white/5">
+                {calorieData.explanationArabic}
+              </p>
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <button
+                onClick={() => handleApplyCaloriePlan(3000)}
+                className="flex-1 py-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-xs active:scale-95 transition-all text-center"
+              >
+                تطبيق هدف 3000 سعرة
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2: Add Custom Meal */}
+      {showAddMealModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xl p-4">
+          <form onSubmit={handleAddCustomMeal} className="apple-glass-elevated w-full max-w-sm rounded-3xl p-5 border border-white/10 shadow-2xl space-y-3 text-right">
+            <div className="flex items-center justify-between pb-2 border-b border-white/5">
+              <h3 className="text-sm font-bold text-white">إضافة وجبة طاقة مخصصة</h3>
+              <button type="button" onClick={() => setShowAddMealModal(false)} className="text-zinc-400 hover:text-white">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div>
+              <label className="text-xs text-zinc-400 block mb-1">اسم الوجبة:</label>
+              <input
+                type="text"
+                required
+                value={customMealTitle}
+                onChange={(e) => setCustomMealTitle(e.target.value)}
+                placeholder="مثال: طبق شوفان بالعسل والمكسرات"
+                className="w-full rounded-xl bg-white/[0.04] border border-white/10 px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs text-zinc-400 block mb-1">السعرات التقديرية:</label>
+              <input
+                type="number"
+                required
+                value={customMealCalories}
+                onChange={(e) => setCustomMealCalories(e.target.value)}
+                className="w-full rounded-xl bg-white/[0.04] border border-white/10 px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs text-zinc-400 block mb-1">المكونات المتوفرة:</label>
+              <input
+                type="text"
+                value={customMealIngredients}
+                onChange={(e) => setCustomMealIngredients(e.target.value)}
+                placeholder="حليب، تمر، طحينة، خبز..."
+                className="w-full rounded-xl bg-white/[0.04] border border-white/10 px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowAddMealModal(false)}
+                className="px-3 py-1.5 rounded-xl text-xs text-zinc-400 hover:text-white"
+              >
+                إلغاء
+              </button>
+              <button
+                type="submit"
+                className="px-5 py-2 rounded-xl bg-emerald-500 text-zinc-950 font-bold text-xs"
+              >
+                إضافة الوجبة
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* MODAL 3: Add Classroom Task */}
+      {showAddTaskModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xl p-4">
+          <form onSubmit={handleAddClassroomTask} className="apple-glass-elevated w-full max-w-sm rounded-3xl p-5 border border-white/10 shadow-2xl space-y-3 text-right">
+            <div className="flex items-center justify-between pb-2 border-b border-white/5">
+              <h3 className="text-sm font-bold text-white">إضافة تكليف كلاس روم</h3>
+              <button type="button" onClick={() => setShowAddTaskModal(false)} className="text-zinc-400 hover:text-white">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div>
+              <label className="text-xs text-zinc-400 block mb-1">المادة:</label>
+              <input
+                type="text"
+                value={customTaskSubject}
+                onChange={(e) => setCustomTaskSubject(e.target.value)}
+                className="w-full rounded-xl bg-white/[0.04] border border-white/10 px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs text-zinc-400 block mb-1">عنوان المهمة أو التكليف:</label>
+              <input
+                type="text"
+                required
+                value={customTaskTitle}
+                onChange={(e) => setCustomTaskTitle(e.target.value)}
+                placeholder="تسليم دراسة حالة / حل كويز..."
+                className="w-full rounded-xl bg-white/[0.04] border border-white/10 px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowAddTaskModal(false)}
+                className="px-3 py-1.5 rounded-xl text-xs text-zinc-400 hover:text-white"
+              >
+                إلغاء
+              </button>
+              <button
+                type="submit"
+                className="px-5 py-2 rounded-xl bg-emerald-500 text-zinc-950 font-bold text-xs"
+              >
+                إضافة المهمة
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* MODAL 4: Rapid OTA / Live Update Checker */}
+      {showUpdateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xl p-4">
+          <div className="apple-glass-elevated w-full max-w-sm rounded-3xl p-5 border border-white/10 shadow-2xl space-y-3 text-right">
+            <div className="flex items-center justify-between pb-2 border-b border-white/5">
+              <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
+                <Zap className="h-4 w-4 text-cyan-400" />
+                <span>مركز التحديث الفوري (Moha Agent OTA)</span>
+              </h3>
+              <button onClick={() => setShowUpdateModal(false)} className="text-zinc-400 hover:text-white">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="space-y-2 text-xs text-zinc-300">
+              <div className="p-3 rounded-2xl bg-white/[0.03] border border-white/5 space-y-1">
+                <div className="flex justify-between">
+                  <span className="text-zinc-400">الإصدار الحالي:</span>
+                  <span className="font-mono text-emerald-400 font-bold">{SystemUpdaterEngine.CURRENT_VERSION}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-zinc-400">حالة الربط:</span>
+                  <span className="text-white">GitHub Main Auto-Sync</span>
+                </div>
+              </div>
+
+              {updateStatus && (
+                <p className="text-[11px] p-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-200">
+                  {updateStatus}
+                </p>
+              )}
+
+              <p className="text-[11px] text-zinc-400 leading-relaxed">
+                بدلاً من تحميل وفك الضغط ونقل الملفات يدوياً، يمكنك الضغط على زر <strong>تطبيق وتحديث الكاش الفوري</strong> لتحديث واجهة هاتفك بأحدث كود مباشرة!
+              </p>
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <button
+                onClick={handleCheckUpdate}
+                className="flex-1 py-2 rounded-xl bg-white/[0.04] text-white text-xs font-bold border border-white/10"
+              >
+                فحص التحديثات
+              </button>
+              <button
+                onClick={handleApplyUpdateReload}
+                className="flex-1 py-2 rounded-xl bg-cyan-500 text-zinc-950 text-xs font-bold shadow-md"
+              >
+                تطبيق التحديث فوراً ⚡
+              </button>
             </div>
           </div>
         </div>

@@ -1,8 +1,26 @@
 // ============================================================================
-// AQLIYA HQ — MOHAMMAD PERSONAL FOCUS & REALITY DATA TYPES
+// MOHA AGENT — PERSONAL FOCUS & REALITY DATA TYPES
 // ============================================================================
 
 export type WorkShiftDayType = 'work_morning' | 'full_focus_day' | 'friday_off';
+
+export interface ClassroomTaskItem {
+  id: string;
+  subject: string;
+  taskTitle: string;
+  dueDate?: string;
+  completed: boolean;
+  type: 'lecture' | 'assignment' | 'exam' | 'face_to_face';
+}
+
+export interface MealItem {
+  id: string;
+  title: string;
+  calories: number;
+  ingredients: string;
+  alternativeMeal: string;
+  completed: boolean;
+}
 
 export interface DailyPersonalPlan {
   date: string;
@@ -11,14 +29,7 @@ export interface DailyPersonalPlan {
   energyTarget: 'high' | 'balanced';
   
   // 1. الكلية التطبيقية والكلاس روم
-  classroomTasks: {
-    id: string;
-    subject: string;
-    taskTitle: string;
-    dueDate?: string;
-    completed: boolean;
-    type: 'lecture' | 'assignment' | 'exam' | 'face_to_face';
-  }[];
+  classroomTasks: ClassroomTaskItem[];
 
   // 2. مشروع نيكسيس (المحامين الأمريكيين)
   nexusTargets: {
@@ -34,14 +45,7 @@ export interface DailyPersonalPlan {
     currentWeightKg: number;
     targetWeightKg: number;
     targetCalories: number;
-    meals: {
-      id: string;
-      title: string;
-      calories: number;
-      ingredients: string;
-      alternativeMeal: string;
-      completed: boolean;
-    }[];
+    meals: MealItem[];
     workoutType: 'Push' | 'Pull' | 'Legs' | 'Upper' | 'Rest_Mobility';
     workoutTitle: string;
     workoutExercises: string[];
@@ -67,4 +71,21 @@ export interface TelegramSITREPMessage {
   generatedAt: string;
   tasksCompleted: number;
   totalTasks: number;
+}
+
+export type PlanMutationAction = 
+  | 'update_calories'
+  | 'update_meal'
+  | 'add_meal'
+  | 'delete_meal'
+  | 'add_classroom_task'
+  | 'delete_classroom_task'
+  | 'update_coursera'
+  | 'update_workout'
+  | 'set_target_weight';
+
+export interface PlanMutation {
+  action: PlanMutationAction;
+  data: Record<string, any>;
+  descriptionArabic: string;
 }

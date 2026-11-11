@@ -16,6 +16,8 @@ import {
 import type { ChatMessage, Mission, IntelItem, CommanderDossier, CommanderMemory, StrategicDirective, BattleLog } from '../types';
 import { geminiConfig } from '../lib/gemini';
 import { IntelligenceCoreEngine } from '../lib/intelligence-core/intelligenceCoreEngine';
+import { PersonalFocusEngine } from '../lib/personal-focus/personalFocusEngine';
+import type { PlanMutation } from '../lib/personal-focus/types';
 
 interface CommanderAIPanelProps {
   messages: ChatMessage[];
@@ -86,10 +88,29 @@ export const CommanderAIPanel: React.FC<CommanderAIPanelProps> = ({
         onStateMutation,
       });
 
+      let cleanContent = result.finalReportMarkdown;
+
+      // Extract and execute automated plan mutations if returned by AI
+      const planActionMatch = cleanContent.match(/```plan_action\s*([\s\S]*?)\s*```/);
+      if (planActionMatch && planActionMatch[1]) {
+        try {
+          const actionObj = JSON.parse(planActionMatch[1]);
+          const res = PersonalFocusEngine.applyMutation(actionObj as PlanMutation);
+          if (res.success) {
+            cleanContent = cleanContent.replace(
+              planActionMatch[0],
+              `\n> 🎯 **تم تعديل خطتك اليومية تلقائياً بنجاح:** ${res.message}\n`
+            );
+          }
+        } catch (err) {
+          console.warn('Auto mutation parse error:', err);
+        }
+      }
+
       const aiMsg: ChatMessage = {
         id: `ai-${Date.now()}`,
         role: 'assistant',
-        content: result.finalReportMarkdown,
+        content: cleanContent,
         created_at: new Date().toISOString(),
       };
       onSendMessage(aiMsg);
@@ -146,16 +167,16 @@ export const CommanderAIPanel: React.FC<CommanderAIPanelProps> = ({
       {/* Header */}
       <div className="flex items-center justify-between pb-3.5 border-b border-white/5 mb-3 flex-shrink-0">
         <div className="flex items-center gap-2.5">
-          <div className="p-2 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
-            <Bot className="h-4.5 w-4.5" />
+          <div className="h-10 w-10 rounded-2xl overflow-hidden border border-emerald-400/40 bg-zinc-900 shadow-md flex-shrink-0">
+            <img src="/logo.png" alt="Moha Agent" className="w-full h-full object-cover" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-sm font-bold text-white">المستشار الشخصي الذكي</h2>
+              <h2 className="text-sm font-bold text-white">Moha Agent | المستشار التكتيكي</h2>
             </div>
             <div className="flex items-center gap-1.5 text-[11px] text-zinc-400 mt-0.5">
               <Circle className={`h-1.5 w-1.5 fill-current ${hasApiKey ? 'text-emerald-400' : 'text-amber-500'}`} />
-              <span className="text-emerald-400 font-medium">{hasApiKey ? 'متصل وجاهز للتشاور' : 'مفتاح API مطلوب'}</span>
+              <span className="text-emerald-400 font-medium">{hasApiKey ? 'متصل ومربوط بخطتك الحية' : 'مفتاح API مطلوب'}</span>
             </div>
           </div>
         </div>
@@ -183,22 +204,35 @@ export const CommanderAIPanel: React.FC<CommanderAIPanelProps> = ({
       {/* Suggested Quick Prompt Pills */}
       <div className="flex gap-1.5 pb-2.5 overflow-x-auto scrollbar-none mb-2 border-b border-white/5 flex-shrink-0">
         <button
-          onClick={() => setInputText('ما هي أولويات عملي وخطتي لليوم بناءً على ملفي الشخصي؟')}
-          className="px-3 py-1.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.07] border border-white/5 text-xs text-zinc-300 hover:text-white whitespace-nowrap transition-all"
+          onClick={() => setInputText('احسب احتياجي اليومي الدقيق من السعرات والبروتين لبناء وزني من 54 إلى 70 كجم وعدّل خطة اليوم')}
+          className="px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 text-xs text-amber-300 whitespace-nowrap transition-all flex items-center gap-1.5"
         >
-          ✨ ملخص أولويات اليوم
+          <span>🥣</span>
+          <span>احسب احتياجي للسعرات (70 كجم)</span>
         </button>
+
         <button
-          onClick={() => setInputText('كيف نطور مشروع NexusOS ونربطه بخطتنا القادمة؟')}
-          className="px-3 py-1.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.07] border border-white/5 text-xs text-zinc-300 hover:text-white whitespace-nowrap transition-all"
+          onClick={() => setInputText('غيّر وجبة المساء في خطتي إلى ساندويتش بيض وبطاطس مهروسة مع زيت الزيتون')}
+          className="px-3 py-1.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.07] border border-white/5 text-xs text-zinc-300 hover:text-white whitespace-nowrap transition-all flex items-center gap-1.5"
         >
-          🎯 خطة NexusOS
+          <span>🍳</span>
+          <span>تعديل وجبة المساء</span>
         </button>
+
         <button
-          onClick={() => setInputText('ما الذي تعلمته عني حتى الآن وما هي نقاط قوتي؟')}
-          className="px-3 py-1.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.07] border border-white/5 text-xs text-zinc-300 hover:text-white whitespace-nowrap transition-all"
+          onClick={() => setInputText('أضف كورس إدارة المشاريع الرقمية والتقنية في كورسيرا لتركيزي القادم')}
+          className="px-3 py-1.5 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 text-xs text-blue-300 whitespace-nowrap transition-all flex items-center gap-1.5"
         >
-          💡 ما تعرفه عني
+          <span>🎓</span>
+          <span>إضافة كورس كورسيرا</span>
+        </button>
+
+        <button
+          onClick={() => setInputText('صغ لي إيميل بارد قوي جداً لمحامي أمريكي يعرض ديمو نيكسيس 14 يوماً مع معالجة خوف اختراق السرية ABA 512')}
+          className="px-3 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-xs text-emerald-300 whitespace-nowrap transition-all flex items-center gap-1.5"
+        >
+          <span>💼</span>
+          <span>إيميل مبيعات نيكسيس ABA 512</span>
         </button>
       </div>
 
