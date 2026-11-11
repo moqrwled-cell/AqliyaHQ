@@ -26,12 +26,22 @@ public class MainActivity extends BridgeActivity {
         if (intent != null && Intent.ACTION_SEND.equals(intent.getAction())) {
             String type = intent.getType();
             if (type != null && ("text/plain".equals(type) || type.startsWith("text/"))) {
-                String text = intent.getStringExtra(Intent.EXTRA_TEXT);
-                if (text == null || text.trim().isEmpty()) {
-                    text = intent.getStringExtra(Intent.EXTRA_SUBJECT);
+                String subject = intent.getStringExtra(Intent.EXTRA_SUBJECT);
+                String extraText = intent.getStringExtra(Intent.EXTRA_TEXT);
+                StringBuilder sb = new StringBuilder();
+                if (subject != null && !subject.trim().isEmpty()) {
+                    sb.append(subject.trim());
                 }
-                if (text != null && !text.trim().isEmpty()) {
-                    this.pendingSharedText = text.trim();
+                if (extraText != null && !extraText.trim().isEmpty()) {
+                    if (sb.length() > 0 && !sb.toString().contains(extraText.trim())) {
+                        sb.append("\n").append(extraText.trim());
+                    } else if (sb.length() == 0) {
+                        sb.append(extraText.trim());
+                    }
+                }
+                String result = sb.toString().trim();
+                if (!result.isEmpty()) {
+                    this.pendingSharedText = result;
                 }
             }
         }

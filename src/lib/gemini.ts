@@ -39,14 +39,12 @@ export const geminiConfig = {
   },
 };
 
-// 2026 Production Models cascade for zero downtime
+// 2026 Production Models cascade for zero downtime (Active & verified)
 const CANDIDATE_MODELS = [
-  'gemini-3.5-flash',
-  'gemini-flash-lite-latest',
   'gemini-3.5-flash-lite',
-  'gemini-3-flash-preview',
-  'gemini-3.7-flash',
-  'gemini-3.8-flash'
+  'gemini-flash-lite-latest',
+  'gemini-3.8-flash',
+  'gemini-flash-latest'
 ];
 
 export async function askCommanderAI(

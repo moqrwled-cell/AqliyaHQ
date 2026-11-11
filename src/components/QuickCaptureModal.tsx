@@ -4,15 +4,16 @@ import {
   ExternalLink, 
   Check, 
   X, 
-  Share2,
-  Video,
-  Lightbulb,
-  Tag,
-  CheckCircle2,
-  Brain
+  Share2, 
+  Lightbulb, 
+  CheckCircle2, 
+  RotateCw,
+  FolderPlus,
+  Play,
+  Film
 } from 'lucide-react';
 import type { IntelItem, IntelCategory, IntelPlatform, Mission } from '../types';
-import { askCommanderAI } from '../lib/gemini';
+import { VideoAnalysisEngine, CATEGORY_LABELS, type SmartVideoCategory } from '../lib/videoAnalysisEngine';
 
 interface QuickCaptureModalProps {
   initialText: string;
@@ -29,94 +30,51 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
 }) => {
   const [url, setUrl] = useState('');
   const [title, setTitle] = useState('');
-  const [category, setCategory] = useState<IntelCategory>('solution_reel');
+  const [category, setCategory] = useState<SmartVideoCategory>('tech');
   const [platform, setPlatform] = useState<IntelPlatform>('web');
   const [problemSolved, setProblemSolved] = useState('');
-  const [selectedMissionId, setSelectedMissionId] = useState<string>('');
+  const [keyTakeaways, setKeyTakeaways] = useState('');
+  const [selectedMissionId, setSelectedMissionId] = useState<string>(''); // Default: NO project!
   const [tagInput, setTagInput] = useState('');
+  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisDone, setAnalysisDone] = useState(false);
 
   useEffect(() => {
-    // Extract URL from shared text
-    const urlMatch = initialText.match(/(https?:\/\/[^\s]+)/i);
-    const extractedUrl = urlMatch ? urlMatch[0] : initialText.trim();
-    setUrl(extractedUrl);
+    // Run instant deep analysis on incoming text
+    runAnalysis(initialText);
+  }, [initialText]);
 
-    const l = extractedUrl.toLowerCase();
-    let detectedPlatform: IntelPlatform = 'web';
-    let defaultTitle = 'رابط ومصدر جديد';
-    let defaultCat: IntelCategory = 'solution_reel';
-
-    if (l.includes('instagram.com')) {
-      detectedPlatform = 'instagram';
-      defaultTitle = 'ريلز إنستغرام';
-      defaultCat = 'solution_reel';
-    } else if (l.includes('tiktok.com')) {
-      detectedPlatform = 'tiktok';
-      defaultTitle = 'ريلز تيك توك';
-      defaultCat = 'solution_reel';
-    } else if (l.includes('youtube.com') || l.includes('youtu.be')) {
-      detectedPlatform = 'youtube';
-      defaultTitle = 'فيديو يوتيوب';
-      defaultCat = 'watch_later';
-    } else if (l.includes('twitter.com') || l.includes('x.com')) {
-      detectedPlatform = 'twitter';
-      defaultTitle = 'تغريدة وفكرة';
-    } else if (l.includes('github.com')) {
-      detectedPlatform = 'github';
-      defaultTitle = 'مستودع كود مفتوح';
-    }
-
-    setPlatform(detectedPlatform);
-    setTitle(defaultTitle);
-    setCategory(defaultCat);
-
-    if (missions.length > 0) {
-      setSelectedMissionId(missions[0].id);
-    }
-
-    // Trigger AI Auto-Analysis
-    autoAnalyzeWithAI(extractedUrl, detectedPlatform, initialText);
-  }, [initialText, missions]);
-
-  const autoAnalyzeWithAI = async (link: string, plat: string, rawText: string) => {
+  const runAnalysis = async (text: string) => {
+    if (!text || !text.trim()) return;
     setIsAnalyzing(true);
+    setAnalysisDone(false);
+
     try {
-      const prompt = `أنت المساعد الذكي لمحمد قرمان. تم استقبال مشاركة رابط/ريلز جديد من ${plat}:
-النص والرابط: "${rawText}"
+      const parsed = VideoAnalysisEngine.parseShareText(text);
+      setUrl(parsed.url || text.trim());
+      setPlatform(VideoAnalysisEngine.detectPlatform(parsed.url || text));
 
-المطلوب: قم بتحليل الرابط/النص واستنتج تلقائياً بصيغة JSON صافية:
-{
-  "title": "عنوان موجز وذكي بالعربية يصف محتوى الريلز بدقة",
-  "problemSolved": "ما هي الفائدة العملية أو الحل التقني الذي يقدمه هذا المحتوى؟",
-  "category": "solution_reel" أو "watch_later" أو "article" أو "reference",
-  "tags": ["وسم1", "وسم2", "وسم3"]
-}
-لا تضع أي نصوص خارج كتلة JSON.`;
+      const analysis = await VideoAnalysisEngine.analyzeVideoShare(text);
 
-      const aiResponse = await askCommanderAI(prompt, {
-        missions,
-        intel: [],
-        memories: [],
-        dossier: null,
-      });
-
-      let cleaned = aiResponse.trim();
-      if (cleaned.includes('```json')) {
-        cleaned = cleaned.split('```json')[1].split('```')[0].trim();
-      } else if (cleaned.includes('```')) {
-        cleaned = cleaned.split('```')[1].split('```')[0].trim();
+      if (analysis.title) setTitle(analysis.title);
+      if (analysis.category) setCategory(analysis.category);
+      if (analysis.problemSolved) setProblemSolved(analysis.problemSolved);
+      if (analysis.keyTakeaways && analysis.keyTakeaways.length > 0) {
+        setKeyTakeaways(analysis.keyTakeaways.join('\n• '));
       }
-
-      const parsed = JSON.parse(cleaned);
-      if (parsed.title) setTitle(parsed.title);
-      if (parsed.problemSolved) setProblemSolved(parsed.problemSolved);
-      if (parsed.category) setCategory(parsed.category);
-      if (parsed.tags && Array.isArray(parsed.tags)) setTagInput(parsed.tags.map((t: string) => `#${t}`).join(' '));
+      if (analysis.tags && analysis.tags.length > 0) {
+        setTagInput(analysis.tags.map(t => `#${t.replace('#', '')}`).join(' '));
+      }
+      if (analysis.thumbnailUrl) {
+        setThumbnailUrl(analysis.thumbnailUrl);
+      }
+      if (analysis.platform) {
+        setPlatform(analysis.platform);
+      }
       setAnalysisDone(true);
     } catch (e) {
-      console.warn('AI Reel analysis fallback', e);
+      console.warn('Analysis fallback error:', e);
     } finally {
       setIsAnalyzing(false);
     }
@@ -134,117 +92,231 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
     onSave({
       title: title.trim(),
       url: url.trim(),
-      category,
+      category: category as IntelCategory,
       platform,
       problem_solved: problemSolved.trim() || null,
-      key_takeaways: null,
-      mission_id: selectedMissionId || null,
-      tags: tags.length > 0 ? tags : ['auto_captured'],
+      key_takeaways: keyTakeaways.trim() ? `• ${keyTakeaways.trim()}` : null,
+      mission_id: selectedMissionId.trim() ? selectedMissionId : null,
+      tags: tags.length > 0 ? tags : [category, platform],
       status: 'unreviewed',
-      thumbnail_url: null,
+      thumbnail_url: thumbnailUrl,
     });
 
     onClose();
   };
 
+  const availableCategories: SmartVideoCategory[] = [
+    'tech',
+    'educational',
+    'business',
+    'fitness',
+    'mindset',
+    'entertainment',
+    'general'
+  ];
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xl p-4 animate-in fade-in duration-200 text-right font-sans">
-      <div className="apple-glass-elevated w-full max-w-lg rounded-3xl p-6 border border-white/10 shadow-2xl overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-2xl p-3 sm:p-4 animate-in fade-in duration-200 text-right font-sans overflow-y-auto">
+      <div className="apple-glass-elevated w-full max-w-lg rounded-3xl p-5 sm:p-6 border border-white/10 shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
         
         {/* Header */}
-        <div className="flex items-center justify-between pb-3.5 mb-4 border-b border-white/5">
+        <div className="flex items-center justify-between pb-3.5 mb-3 border-b border-white/5 flex-shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="h-9 w-9 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
-              <Share2 className="h-4.5 w-4.5" />
+            <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shadow-md shadow-emerald-950/40">
+              <Share2 className="h-5 w-5" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-white">التقاط وتحليل ذكي</h2>
-              <p className="text-xs text-zinc-400">تم استقبال الرابط من تطبيق خارجي</p>
+              <h2 className="text-base font-bold text-white flex items-center gap-2">
+                <span>التقاط وتحليل ذكي للفيديو</span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 font-mono">
+                  {platform.toUpperCase()}
+                </span>
+              </h2>
+              <p className="text-xs text-zinc-400">فهم واستخلاص الفائدة الحقيقية بدون كلام عشوائي</p>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="p-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-zinc-400 hover:text-white transition-colors"
+            className="p-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-zinc-400 hover:text-white transition-colors"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
         {/* AI Analysis Status Banner */}
-        <div className={`mb-4 p-3 rounded-2xl border transition-all flex items-center gap-2.5 ${
+        <div className={`mb-3.5 p-3 rounded-2xl border transition-all flex items-center justify-between gap-2.5 flex-shrink-0 ${
           isAnalyzing
             ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-300'
             : analysisDone
             ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300'
             : 'bg-white/[0.02] border-white/5 text-zinc-400'
         }`}>
-          {isAnalyzing ? (
-            <>
-              <Sparkles className="h-4 w-4 text-emerald-400 animate-spin" />
-              <span className="text-xs font-medium">جارٍ تحليل محتوى الريلز وتصنيفه ذاتياً بواسطة الذكاء الاصطناعي...</span>
-            </>
-          ) : analysisDone ? (
-            <>
-              <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-              <span className="text-xs font-medium">تم استخلاص الفائدة وتصنيف المحتوى تلقائياً بنجاح!</span>
-            </>
-          ) : (
-            <>
-              <Brain className="h-4 w-4 text-zinc-500" />
-              <span className="text-xs">رابط جاهز للحفظ في بنك المعرفة</span>
-            </>
-          )}
+          <div className="flex items-center gap-2">
+            {isAnalyzing ? (
+              <>
+                <Sparkles className="h-4 w-4 text-emerald-400 animate-spin flex-shrink-0" />
+                <span className="text-xs font-medium">جارٍ فحص محتوى الريلز وفهم الفائدة الحقيقية...</span>
+              </>
+            ) : analysisDone ? (
+              <>
+                <CheckCircle2 className="h-4 w-4 text-emerald-400 flex-shrink-0" />
+                <span className="text-xs font-bold">تم تحليل الفيديو بنجاح واستخراج الفائدة الدقيقة!</span>
+              </>
+            ) : (
+              <span className="text-xs">رابط جاهز للتحليل</span>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => runAnalysis(initialText)}
+            disabled={isAnalyzing}
+            className="p-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] text-zinc-300 hover:text-white transition-all disabled:opacity-50"
+            title="إعادة الفحص والتحليل"
+          >
+            <RotateCw className={`h-3.5 w-3.5 ${isAnalyzing ? 'animate-spin' : ''}`} />
+          </button>
         </div>
 
-        <form onSubmit={handleSave} className="space-y-3.5">
+        {/* Form Body (Scrollable) */}
+        <form onSubmit={handleSave} className="space-y-3.5 overflow-y-auto pr-1 flex-1">
+          
+          {/* Thumbnail preview if available */}
+          {thumbnailUrl && (
+            <div className="relative rounded-2xl overflow-hidden border border-white/10 max-h-36 bg-black/40 flex items-center justify-center group">
+              <img 
+                src={thumbnailUrl} 
+                alt="معاينة الفيديو" 
+                className="w-full h-36 object-cover opacity-85 group-hover:opacity-100 transition-opacity" 
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end p-2.5">
+                <span className="text-[11px] text-white/90 font-medium truncate flex items-center gap-1.5">
+                  <Film className="h-3.5 w-3.5 text-emerald-400" />
+                  <span>معاينة المحتوى الأصلي</span>
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* 1. Content Title */}
           <div>
-            <label className="text-xs text-zinc-400 block mb-1">عنوان المحتوى:</label>
+            <label className="text-xs text-zinc-300 font-medium block mb-1.5">
+              العنوان المناسب للفيديو:
+            </label>
             <input
               type="text"
               required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full rounded-xl bg-white/[0.04] border border-white/10 px-3.5 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+              placeholder="عنوان واضح يصف موضوع الفيديو..."
+              className="w-full rounded-2xl bg-white/[0.04] border border-white/10 px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500 font-medium"
             />
           </div>
 
+          {/* 2. Interactive Category Chips */}
           <div>
-            <label className="text-xs text-zinc-400 block mb-1">الرابط المستلم:</label>
-            <div className="flex items-center gap-2 rounded-xl bg-white/[0.03] border border-white/10 px-3 py-2">
+            <label className="text-xs text-zinc-300 font-medium block mb-1.5">
+              تصنيف المحتوى (اختر بلمسة واحدة):
+            </label>
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5">
+              {availableCategories.map((catKey) => {
+                const info = CATEGORY_LABELS[catKey];
+                const isSelected = category === catKey;
+                return (
+                  <button
+                    key={catKey}
+                    type="button"
+                    onClick={() => setCategory(catKey)}
+                    className={`py-1.5 px-2 rounded-xl text-[11px] font-bold border transition-all flex items-center justify-center gap-1.5 ${
+                      isSelected
+                        ? `${info.color} scale-102 shadow-md`
+                        : 'bg-white/[0.02] border-white/5 text-zinc-400 hover:text-zinc-200'
+                    }`}
+                  >
+                    <span>{info.icon}</span>
+                    <span>{info.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* 3. Problem Solved & Key Benefit (Prominent Card) */}
+          <div className="p-3.5 rounded-2xl bg-emerald-500/[0.04] border border-emerald-500/20 space-y-1.5">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-300">
+              <Lightbulb className="h-4 w-4 text-emerald-400" />
+              <span>الفائدة المباشرة أو المشكلة التي يحلها:</span>
+            </div>
+            <textarea
+              rows={2}
+              value={problemSolved}
+              onChange={(e) => setProblemSolved(e.target.value)}
+              placeholder="ما هي الزبدة أو الحل العملي الذي يقدمه هذا الفيديو؟"
+              className="w-full rounded-xl bg-black/30 border border-white/5 p-2.5 text-xs text-zinc-200 focus:outline-none focus:border-emerald-500 leading-relaxed font-sans"
+            />
+          </div>
+
+          {/* 4. Practical Key Points / Takeaways */}
+          <div>
+            <label className="text-xs text-zinc-400 block mb-1">
+              النقاط العملية المستفادة:
+            </label>
+            <textarea
+              rows={2}
+              value={keyTakeaways}
+              onChange={(e) => setKeyTakeaways(e.target.value)}
+              placeholder="نقطة 1&#10;نقطة 2"
+              className="w-full rounded-2xl bg-white/[0.04] border border-white/10 p-2.5 text-xs text-zinc-300 focus:outline-none focus:border-emerald-500 leading-relaxed"
+            />
+          </div>
+
+          {/* 5. URL Display with External Link */}
+          <div>
+            <label className="text-xs text-zinc-400 block mb-1">الرابط المكتشف:</label>
+            <div className="flex items-center gap-2 rounded-2xl bg-white/[0.03] border border-white/10 px-3 py-2">
               <input
                 type="url"
                 required
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
-                className="w-full bg-transparent text-xs text-zinc-300 focus:outline-none font-mono"
+                className="w-full bg-transparent text-[11px] text-zinc-300 focus:outline-none font-mono"
               />
-              <a href={url} target="_blank" rel="noreferrer" className="text-zinc-500 hover:text-emerald-400">
+              <a 
+                href={url} 
+                target="_blank" 
+                rel="noreferrer" 
+                className="p-1 rounded-lg hover:bg-white/10 text-zinc-400 hover:text-emerald-400"
+                title="فتح الرابط الأصلي"
+              >
                 <ExternalLink className="h-3.5 w-3.5" />
               </a>
             </div>
           </div>
 
-          <div>
-            <label className="text-xs text-zinc-400 block mb-1">الفائدة أو المشكلة التي يحلها:</label>
-            <textarea
-              rows={2}
-              value={problemSolved}
-              onChange={(e) => setProblemSolved(e.target.value)}
-              placeholder="الملخص العملي لما يقدمه هذا الفيديو..."
-              className="w-full rounded-xl bg-white/[0.04] border border-white/10 p-3 text-xs text-white focus:outline-none focus:border-emerald-500 leading-relaxed"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
+          {/* 6. Tags & Optional Project Link */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="text-xs text-zinc-400 block mb-1">ربط بمشروع:</label>
+              <label className="text-xs text-zinc-400 block mb-1">الوسوم الذكية:</label>
+              <input
+                type="text"
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                placeholder="#تقنية #ذكاء #فيديو"
+                className="w-full rounded-2xl bg-white/[0.04] border border-white/10 px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs text-zinc-400 block mb-1">
+                ربط بمشروع (اختياري - غير إجباري):
+              </label>
               <select
                 value={selectedMissionId}
                 onChange={(e) => setSelectedMissionId(e.target.value)}
-                className="w-full rounded-xl bg-[#0e172a] border border-white/10 px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                className="w-full rounded-2xl bg-[#090e1c] border border-white/10 px-3 py-2 text-xs text-zinc-300 focus:outline-none focus:border-emerald-500"
               >
-                <option value="">بدون ربط بمشروع محدد</option>
+                <option value="">[ محتوى مستقل - بدون مشروع ]</option>
                 {missions.map((m) => (
                   <option key={m.id} value={m.id}>
                     [{m.code}] {m.title}
@@ -252,35 +324,27 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
                 ))}
               </select>
             </div>
-
-            <div>
-              <label className="text-xs text-zinc-400 block mb-1">الوسوم:</label>
-              <input
-                type="text"
-                value={tagInput}
-                onChange={(e) => setTagInput(e.target.value)}
-                placeholder="#ريلز #ذكاء #برمجة"
-                className="w-full rounded-xl bg-white/[0.04] border border-white/10 px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-              />
-            </div>
           </div>
 
-          <div className="flex items-center justify-end gap-2 pt-2">
+          {/* Action Buttons */}
+          <div className="flex items-center justify-between gap-3 pt-3 border-t border-white/5 flex-shrink-0">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-xl text-xs text-zinc-400 hover:text-white"
+              className="px-4 py-2.5 rounded-2xl text-xs font-medium text-zinc-400 hover:text-white bg-white/[0.03] hover:bg-white/[0.06] transition-all"
             >
               إلغاء
             </button>
             <button
               type="submit"
-              className="px-6 py-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-xs shadow-lg shadow-emerald-950/40 transition-all active:scale-95 flex items-center gap-1.5"
+              disabled={isAnalyzing}
+              className="flex-1 py-2.5 px-6 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-zinc-950 font-bold text-xs shadow-lg shadow-emerald-950/40 transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50"
             >
               <Check className="h-4 w-4 stroke-[3]" />
               <span>حفظ في بنك المعرفة</span>
             </button>
           </div>
+
         </form>
 
       </div>

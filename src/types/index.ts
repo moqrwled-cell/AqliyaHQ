@@ -26,7 +26,18 @@ export interface StrategicDirective {
   created_at: string;
 }
 
-export type IntelCategory = 'watch_later' | 'solution_reel' | 'article' | 'reference';
+export type IntelCategory = 
+  | 'watch_later' 
+  | 'solution_reel' 
+  | 'article' 
+  | 'reference'
+  | 'tech'
+  | 'educational'
+  | 'business'
+  | 'fitness'
+  | 'mindset'
+  | 'entertainment'
+  | 'general';
 export type IntelPlatform = 'youtube' | 'instagram' | 'tiktok' | 'twitter' | 'github' | 'web';
 export type IntelStatus = 'unreviewed' | 'reviewed' | 'implemented';
 
