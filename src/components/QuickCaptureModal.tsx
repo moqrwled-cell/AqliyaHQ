@@ -37,6 +37,7 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
   const [selectedMissionId, setSelectedMissionId] = useState<string>(''); // Default: NO project!
   const [tagInput, setTagInput] = useState('');
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
+  const [userHint, setUserHint] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisDone, setAnalysisDone] = useState(false);
 
@@ -45,7 +46,7 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
     runAnalysis(initialText);
   }, [initialText]);
 
-  const runAnalysis = async (text: string) => {
+  const runAnalysis = async (text: string, hint?: string) => {
     if (!text || !text.trim()) return;
     setIsAnalyzing(true);
     setAnalysisDone(false);
@@ -55,7 +56,8 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
       setUrl(parsed.url || text.trim());
       setPlatform(VideoAnalysisEngine.detectPlatform(parsed.url || text));
 
-      const analysis = await VideoAnalysisEngine.analyzeVideoShare(text);
+      const effectiveHint = hint !== undefined ? hint : userHint;
+      const analysis = await VideoAnalysisEngine.analyzeVideoShare(text, effectiveHint);
 
       if (analysis.title) setTitle(analysis.title);
       if (analysis.category) setCategory(analysis.category);
@@ -106,10 +108,11 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
   };
 
   const availableCategories: SmartVideoCategory[] = [
+    'editing',
     'tech',
-    'educational',
     'business',
     'fitness',
+    'educational',
     'mindset',
     'entertainment',
     'general'
@@ -182,6 +185,54 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
         {/* Form Body (Scrollable) */}
         <form onSubmit={handleSave} className="space-y-3.5 overflow-y-auto pr-1 flex-1">
           
+          {/* Quick Topic Hint / Trigger */}
+          <div className="p-3 rounded-2xl bg-white/[0.03] border border-white/5 space-y-2">
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="text-zinc-400 font-medium">توجيه فوري للذكاء الاصطناعي (اختر موضوع الفيديو إذا رغبت):</span>
+              {userHint && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUserHint('');
+                    runAnalysis(initialText, '');
+                  }}
+                  className="text-zinc-500 hover:text-red-400 text-[10px]"
+                >
+                  مسح التوجيه
+                </button>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {[
+                { label: '🎬 مونتاج وبريمير', hint: 'مونتاج فيديو وبرامج تعديل بريمير وكاب كات وافتر افكت' },
+                { label: '💻 برمجة وذكاء اصطناعي', hint: 'أدوات ذكاء اصطناعي وتقنية وبرمجة' },
+                { label: '💼 مبيعات وبزنس', hint: 'مبيعات وتسويق وإدارة مشاريع' },
+                { label: '🏋️‍♂️ تمارين وتغذية', hint: 'تمارين كاليسثينكس وجيم وتغذية وبناء جسم' },
+                { label: '📚 إنجليزي ودراسة', hint: 'لغة إنجليزية ودراسة وكورسات' },
+                { label: '🧠 عادات وإنتاجية', hint: 'عادات يومية وتنظيم وقت وإنتاجية' },
+              ].map((item, idx) => {
+                const isActive = userHint === item.hint;
+                return (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => {
+                      setUserHint(item.hint);
+                      runAnalysis(initialText, item.hint);
+                    }}
+                    className={`px-2.5 py-1 rounded-xl text-[11px] font-semibold border transition-all active:scale-95 flex items-center gap-1 ${
+                      isActive
+                        ? 'bg-rose-500/25 border-rose-500/50 text-rose-200 shadow-sm'
+                        : 'bg-white/[0.04] border-white/5 text-zinc-300 hover:bg-white/[0.08]'
+                    }`}
+                  >
+                    <span>{item.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Thumbnail preview if available */}
           {thumbnailUrl && (
             <div className="relative rounded-2xl overflow-hidden border border-white/10 max-h-36 bg-black/40 flex items-center justify-center group">

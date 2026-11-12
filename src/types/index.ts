@@ -27,6 +27,7 @@ export interface StrategicDirective {
 }
 
 export type IntelCategory = 
+  | 'editing'
   | 'watch_later' 
   | 'solution_reel' 
   | 'article' 

@@ -1,6 +1,8 @@
 // ============================================================================
-// MOHA AGENT — ADVANCED ALARM ENGINE (WEB AUDIO API + NATIVE VIBRATION)
+// MOHA AGENT — ADVANCED ALARM ENGINE (CAPACITOR NATIVE + WEB AUDIO API)
 // ============================================================================
+
+import { LocalNotifications } from '@capacitor/local-notifications';
 
 export type RingtoneToneId = 'military' | 'radar' | 'gentle' | 'siren' | 'cyber';
 
@@ -50,6 +52,7 @@ export interface AlarmItem {
 }
 
 const STORAGE_KEY_ALARMS = 'moha_alarms_v1';
+const ALARM_CHANNEL_ID = 'moha_alarm_channel_v1';
 
 export class AlarmEngine {
   private static audioCtx: AudioContext | null = null;
@@ -58,6 +61,7 @@ export class AlarmEngine {
   private static intervalHandle: any = null;
   private static playbackLoopTimer: any = null;
   private static currentlyRingingAlarm: AlarmItem | null = null;
+  private static nativeChannelCreated = false;
 
   private static getAudioContext(): AudioContext {
     if (!this.audioCtx) {
@@ -71,7 +75,102 @@ export class AlarmEngine {
   }
 
   /**
-   * جلب قائمة المنبهات المحفوظة أو البدء بالإعدادات الافتراضية المناسبة لمحمد
+   * تحويل المعرف النصي إلى رقم صحيح فريد لـ Capacitor Notification ID
+   */
+  private static hashId(id: string): number {
+    let hash = 0;
+    for (let i = 0; i < id.length; i++) {
+      hash = (hash << 5) - hash + id.charCodeAt(i);
+      hash |= 0;
+    }
+    return Math.abs(hash);
+  }
+
+  /**
+   * إعداد قناة الإشعارات والمنبهات في نظام أندرويد (تنبيه ذو أولوية قصوى)
+   */
+  public static async ensureNativeChannel(): Promise<void> {
+    if (this.nativeChannelCreated) return;
+    try {
+      await LocalNotifications.createChannel({
+        id: ALARM_CHANNEL_ID,
+        name: 'منبهات Moha Agent للاستيقاظ والمهام',
+        description: 'قناة المنبهات الرسمية لتشغيل التنبيهات والأصوات والاهتزاز حتى أثناء قفل الهاتف',
+        importance: 5, // 5 = High importance (Heads-up notification + sound)
+        visibility: 1, // Public on lockscreen
+        vibration: true,
+        lights: true,
+      });
+      this.nativeChannelCreated = true;
+    } catch (e) {
+      console.warn('Native notification channel init skipped or not supported:', e);
+    }
+  }
+
+  /**
+   * مزامنة المنبهات في خلفية نظام أندرويد (Background Native Exact Alarms)
+   * تعمل حتى لو كان التطبيق مغلقاً أو الشاشة مطفأة
+   */
+  public static async syncNativeAlarms(alarms: AlarmItem[]): Promise<void> {
+    try {
+      await this.ensureNativeChannel();
+      
+      // طلب الإذن إن لم يكن ممنوحاً
+      await LocalNotifications.requestPermissions().catch(() => {});
+
+      // إلغاء الجدولة السابقة لمنع التكرار
+      const pending = await LocalNotifications.getPending().catch(() => ({ notifications: [] }));
+      if (pending && pending.notifications.length > 0) {
+        await LocalNotifications.cancel({ notifications: pending.notifications }).catch(() => {});
+      }
+
+      const notificationsToSchedule: any[] = [];
+      const now = new Date();
+
+      for (const alarm of alarms) {
+        if (!alarm.enabled) continue;
+
+        const [hh, mm] = alarm.time.split(':').map(Number);
+        const targetDate = new Date();
+        targetDate.setHours(hh, mm, 0, 0);
+
+        // إذا كان وقت اليوم قد مضى، جدول ليوم غد
+        if (targetDate.getTime() <= now.getTime() + 1000) {
+          targetDate.setDate(targetDate.getDate() + 1);
+        }
+
+        notificationsToSchedule.push({
+          id: this.hashId(alarm.id),
+          title: `⏰ رنين منبه Moha Agent: ${alarm.time}`,
+          body: `${alarm.label}\nحان الوقت الآن! استيقظ وانطلق بعزيمة.`,
+          schedule: {
+            at: targetDate,
+            allowWhileIdle: true, // Wakes device from Android Doze mode
+            repeats: true,
+            every: 'day',
+          },
+          channelId: ALARM_CHANNEL_ID,
+          ongoing: true,
+          autoCancel: false,
+          extra: {
+            alarmId: alarm.id,
+            time: alarm.time,
+            label: alarm.label,
+            tone: alarm.tone,
+          },
+        });
+      }
+
+      if (notificationsToSchedule.length > 0) {
+        await LocalNotifications.schedule({ notifications: notificationsToSchedule });
+      }
+    } catch (e) {
+      console.warn('Native alarm synchronization fallback:', e);
+    }
+  }
+
+  /**
+   * جلب قائمة المنبهات المحفوظة
    */
   public static getAlarms(): AlarmItem[] {
     try {
@@ -127,6 +226,9 @@ export class AlarmEngine {
     try {
       localStorage.setItem(STORAGE_KEY_ALARMS, JSON.stringify(alarms));
       window.dispatchEvent(new CustomEvent('moha:alarms-updated', { detail: alarms }));
+      
+      // مزامنة فورية مع أندرويد في الخلفية
+      this.syncNativeAlarms(alarms);
     } catch (e) {
       console.error('Failed to save alarms:', e);
     }
@@ -143,7 +245,6 @@ export class AlarmEngine {
       volume,
     };
     alarms.push(newAlarm);
-    // Sort chronologically
     alarms.sort((a, b) => a.time.localeCompare(b.time));
     this.saveAlarms(alarms);
     return alarms;
@@ -169,7 +270,7 @@ export class AlarmEngine {
   }
 
   /**
-   * تشغيل نغمة صوتية مولدة برمجياً (Web Audio Synth) للمعاينة أو الرنين الفعلي
+   * تشغيل نغمة صوتية مولدة برمجياً (Web Audio Synth)
    */
   public static playTone(tone: RingtoneToneId, volume: number = 0.8, loop: boolean = false): void {
     this.stopAudioOnly();
@@ -222,7 +323,6 @@ export class AlarmEngine {
           }
 
         } else if (tone === 'radar') {
-          // نبضات رادار متصاعدة
           for (let i = 0; i < 3; i++) {
             const osc = ctx.createOscillator();
             osc.type = 'sine';
@@ -249,8 +349,7 @@ export class AlarmEngine {
           }
 
         } else if (tone === 'gentle') {
-          // رنين بيانو/أجراس تصاعدي هادئ
-          const chords = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+          const chords = [523.25, 659.25, 783.99, 1046.50];
           chords.forEach((freq, idx) => {
             const osc = ctx.createOscillator();
             osc.type = 'triangle';
@@ -277,7 +376,6 @@ export class AlarmEngine {
           }
 
         } else if (tone === 'siren') {
-          // صافرة إنذار مستمرة
           const osc = ctx.createOscillator();
           osc.type = 'sawtooth';
           osc.frequency.setValueAtTime(600, now);
@@ -303,7 +401,7 @@ export class AlarmEngine {
           }
 
         } else {
-          // Cyber Digital Beep (Classic Clock)
+          // Cyber Digital Beep
           for (let i = 0; i < 4; i++) {
             const osc = ctx.createOscillator();
             osc.type = 'square';
@@ -352,7 +450,7 @@ export class AlarmEngine {
   }
 
   /**
-   * تشغيل الرنين الكامل للمنبه (صوت متكرر + اهتزاز الهاتف + إشعار)
+   * تشغيل الرنين الكامل للمنبه (صوت + اهتزاز الهاتف + إشعار)
    */
   public static triggerAlarm(alarm: AlarmItem): void {
     this.currentlyRingingAlarm = alarm;
@@ -360,26 +458,14 @@ export class AlarmEngine {
     // 1. تشغيل الصوت بتكرار مستمر
     this.playTone(alarm.tone, alarm.volume, true);
 
-    // 2. اهتزاز الهاتف إذا كان مدعوماً
+    // 2. اهتزاز الهاتف
     if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
       try {
         navigator.vibrate([1000, 400, 1000, 400, 2000]);
       } catch (e) {}
     }
 
-    // 3. إطلاق إشعار عالي الأهمية
-    if ('Notification' in window && Notification.permission === 'granted') {
-      try {
-        new Notification(`⏰ منبه Moha Agent: ${alarm.time}`, {
-          body: `${alarm.label}\nحان الوقت للتحرك الآن بكل حزم!`,
-          icon: '/logo.png',
-          requireInteraction: true,
-          tag: 'moha-alarm-ringing',
-        });
-      } catch (e) {}
-    }
-
-    // 4. إشعار الواجهة بالرنين لإظهار شاشة المنبه المنبثقة
+    // 3. إشعار الواجهة بالرنين لإظهار شاشة المنبه المنبثقة
     window.dispatchEvent(new CustomEvent('moha:alarm-triggered', { detail: alarm }));
   }
 
@@ -420,9 +506,27 @@ export class AlarmEngine {
   }
 
   /**
-   * بدء محرك الفحص الدائم (يفحص كل ثانية لتوافق الوقت بدقة تامة)
+   * بدء محرك الفحص الدائم ومزامنة أندرويد
    */
   public static startMonitoring(): void {
+    // 1. مزامنة فورية مع منبهات النظام الأصلية في أندرويد
+    const alarms = this.getAlarms();
+    this.syncNativeAlarms(alarms);
+
+    // 2. الاستماع لأحداث النقر على إشعار المنبه القادم من الخلفية
+    try {
+      LocalNotifications.addListener('localNotificationActionPerformed', (action) => {
+        const extra = action.notification.extra;
+        if (extra && extra.alarmId) {
+          const alarm = this.getAlarms().find(a => a.id === extra.alarmId);
+          if (alarm) {
+            this.triggerAlarm(alarm);
+          }
+        }
+      });
+    } catch (e) {}
+
+    // 3. فحص الواجهة الأمامية أثناء فتح التطبيق
     if (this.intervalHandle) return;
 
     this.intervalHandle = setInterval(() => {
@@ -432,12 +536,11 @@ export class AlarmEngine {
       const currentTimeStr = `${currentHours}:${currentMinutes}`;
       const todayDateStr = now.toISOString().split('T')[0];
 
-      const alarms = this.getAlarms();
+      const currentAlarms = this.getAlarms();
       let hasUpdates = false;
 
-      alarms.forEach(alarm => {
+      currentAlarms.forEach(alarm => {
         if (alarm.enabled && alarm.time === currentTimeStr) {
-          // التأكد من عدم تكرار الرنين خلال نفس الدقيقة لليوم نفسه
           if (alarm.lastTriggeredDate !== todayDateStr) {
             alarm.lastTriggeredDate = todayDateStr;
             hasUpdates = true;
@@ -447,7 +550,7 @@ export class AlarmEngine {
       });
 
       if (hasUpdates) {
-        this.saveAlarms(alarms);
+        this.saveAlarms(currentAlarms);
       }
     }, 1000);
   }

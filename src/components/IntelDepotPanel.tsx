@@ -36,6 +36,7 @@ export const IntelDepotPanel: React.FC<IntelDepotPanelProps> = ({
 
   const filterTabs: { id: string; label: string; icon?: string }[] = [
     { id: 'all', label: `الكل (${items.length})` },
+    { id: 'editing', label: 'مونتاج وصناعة محتوى', icon: '🎬' },
     { id: 'tech', label: 'تقني', icon: '💻' },
     { id: 'educational', label: 'تعليمي', icon: '📚' },
     { id: 'business', label: 'أعمال', icon: '💼' },

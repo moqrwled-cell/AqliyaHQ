@@ -16,6 +16,7 @@
     "@capacitor/android": "^8.6.0",
     "@capacitor/cli": "^8.6.0",
     "@capacitor/core": "^8.6.0",
+    "@capacitor/local-notifications": "^8.3.1",
     "@supabase/supabase-js": "^2.119.0",
     "@tailwindcss/vite": "^4.3.5",
     "clsx": "^2.1.1",
@@ -50,7 +51,9 @@
       "package.json"
     ],
     "win": {
-      "target": ["dir"]
+      "target": [
+        "dir"
+      ]
     },
     "nsis": {
       "oneClick": false,
