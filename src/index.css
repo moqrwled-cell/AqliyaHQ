@@ -1,5 +1,4 @@
 @import "tailwindcss";
-@import "glisse/styles.css";
 
 /* ==========================================================================
    AQEEQ SANS PRO & MODERN TYPOGRAPHY
@@ -75,40 +74,42 @@
 }
 
 /* ==========================================================================
-   MONOCHROME LUXURY LIQUID GLASS UTILITIES (APPLE & GLISSE INTEGRATION)
+   MONOCHROME LUXURY LIQUID GLASS UTILITIES (LIGHTWEIGHT & HARDWARE ACCELERATED)
    ========================================================================== */
 .apple-glass {
-  background: rgba(12, 12, 16, 0.72);
-  backdrop-filter: blur(32px) saturate(180%);
-  -webkit-backdrop-filter: blur(32px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  border-top: 1px solid rgba(255, 255, 255, 0.20);
-  box-shadow: 0 12px 36px -10px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  background: rgba(12, 12, 14, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.7);
+  transform: translateZ(0);
 }
 
 .apple-glass-card {
-  background: rgba(16, 16, 20, 0.65);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-top: 1px solid rgba(255, 255, 255, 0.16);
-  box-shadow: 0 4px 24px -2px rgba(0, 0, 0, 0.5);
-  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  background: rgba(16, 16, 18, 0.80);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.6);
+  transform: translateZ(0);
+  transition: background-color 0.18s ease;
 }
 
 .apple-glass-card:hover {
-  background: rgba(22, 22, 28, 0.82);
-  border-color: rgba(255, 255, 255, 0.18);
-  transform: translateY(-1px);
+  background: rgba(24, 24, 28, 0.92);
+  border-color: rgba(255, 255, 255, 0.16);
 }
 
 .apple-glass-elevated {
-  background: rgba(10, 10, 14, 0.92);
-  backdrop-filter: blur(40px);
-  -webkit-backdrop-filter: blur(40px);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-top: 1px solid rgba(255, 255, 255, 0.28);
-  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  background: rgba(10, 10, 12, 0.96);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-top: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.95);
+  transform: translateZ(0);
 }
 
 .craft-border {

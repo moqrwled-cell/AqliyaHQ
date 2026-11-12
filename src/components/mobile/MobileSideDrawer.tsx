@@ -109,7 +109,7 @@ export const MobileSideDrawer: React.FC<MobileSideDrawerProps> = ({
               <div className="text-right">
                 <h3 className="text-sm font-bold text-white">محمد قرمان</h3>
                 <span className="text-[11px] text-zinc-400 flex items-center justify-end gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
                   <span>Moha Agent • نشط</span>
                 </span>
               </div>

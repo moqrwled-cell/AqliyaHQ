@@ -125,13 +125,13 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between pb-3.5 mb-3 border-b border-white/5 flex-shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shadow-md shadow-emerald-950/40">
+            <div className="h-10 w-10 rounded-2xl bg-white/10 border border-white/15 flex items-center justify-center text-white shadow-md">
               <Share2 className="h-5 w-5" />
             </div>
             <div>
               <h2 className="text-base font-bold text-white flex items-center gap-2">
                 <span>التقاط وتحليل ذكي للفيديو</span>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 font-mono">
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/10 border border-white/15 text-white font-mono">
                   {platform.toUpperCase()}
                 </span>
               </h2>
@@ -150,20 +150,20 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
         {/* AI Analysis Status Banner */}
         <div className={`mb-3.5 p-3 rounded-2xl border transition-all flex items-center justify-between gap-2.5 flex-shrink-0 ${
           isAnalyzing
-            ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-300'
+            ? 'bg-white/10 border-white/20 text-white'
             : analysisDone
-            ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300'
+            ? 'bg-white/10 border-white/20 text-white'
             : 'bg-white/[0.02] border-white/5 text-zinc-400'
         }`}>
           <div className="flex items-center gap-2">
             {isAnalyzing ? (
               <>
-                <Sparkles className="h-4 w-4 text-emerald-400 animate-spin flex-shrink-0" />
+                <Sparkles className="h-4 w-4 text-white animate-spin flex-shrink-0" />
                 <span className="text-xs font-medium">جارٍ فحص محتوى الريلز وفهم الفائدة الحقيقية...</span>
               </>
             ) : analysisDone ? (
               <>
-                <CheckCircle2 className="h-4 w-4 text-emerald-400 flex-shrink-0" />
+                <CheckCircle2 className="h-4 w-4 text-white flex-shrink-0" />
                 <span className="text-xs font-bold">تم تحليل الفيديو بنجاح واستخراج الفائدة الدقيقة!</span>
               </>
             ) : (
@@ -365,7 +365,7 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
               <select
                 value={selectedMissionId}
                 onChange={(e) => setSelectedMissionId(e.target.value)}
-                className="w-full rounded-2xl bg-[#090e1c] border border-white/10 px-3 py-2 text-xs text-zinc-300 focus:outline-none focus:border-emerald-500"
+                className="w-full rounded-2xl bg-zinc-900 border border-white/10 px-3 py-2 text-xs text-zinc-300 focus:outline-none focus:border-white"
               >
                 <option value="">[ محتوى مستقل - بدون مشروع ]</option>
                 {missions.map((m) => (
@@ -389,7 +389,7 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
             <button
               type="submit"
               disabled={isAnalyzing}
-              className="flex-1 py-2.5 px-6 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-zinc-950 font-bold text-xs shadow-lg shadow-emerald-950/40 transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50"
+              className="flex-1 py-2.5 px-6 rounded-2xl bg-white hover:bg-zinc-200 text-black font-bold text-xs shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50"
             >
               <Check className="h-4 w-4 stroke-[3]" />
               <span>حفظ في بنك المعرفة</span>

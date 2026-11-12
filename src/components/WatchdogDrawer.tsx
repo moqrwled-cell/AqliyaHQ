@@ -53,10 +53,10 @@ export const WatchdogDrawer: React.FC<WatchdogDrawerProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="w-full max-w-2xl bg-[#0b0f19] border border-amber-500/40 rounded-2xl shadow-2xl overflow-hidden flex flex-col text-right max-h-[90vh]">
+      <div className="w-full max-w-2xl bg-[#0a0a0c] border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col text-right max-h-[90vh]">
         
         {/* Header HUD */}
-        <div className="flex items-center justify-between p-4 border-b craft-border bg-[#0e1424]">
+        <div className="flex items-center justify-between p-4 border-b border-white/10 bg-zinc-950">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400">
               <ShieldAlert className="h-5 w-5 animate-pulse" />

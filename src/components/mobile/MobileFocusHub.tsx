@@ -27,7 +27,6 @@ import {
   Menu,
   ChevronLeft
 } from 'lucide-react';
-import { Glass } from 'glisse';
 import { PersonalFocusEngine } from '../../lib/personal-focus/personalFocusEngine';
 import type { DailyPersonalPlan } from '../../lib/personal-focus/types';
 import { NotificationManager } from '../../lib/notifications/notificationManager';
@@ -40,15 +39,11 @@ interface MobileFocusHubProps {
   onOpenSideDrawer?: () => void;
 }
 
-export const MobileFocusHub: React.FC<MobileFocusHubProps> = ({ onOpenSideDrawer }) => {
-  const [plan, setPlan] = useState<DailyPersonalPlan>(() => PersonalFocusEngine.getTodayPlan());
-  const [copiedHook, setCopiedHook] = useState(false);
-  const [copiedReport, setCopiedReport] = useState(false);
-  const [backupStatus, setBackupStatus] = useState<string | null>(null);
-  const [showAlternativeMeal, setShowAlternativeMeal] = useState<Record<string, boolean>>({});
-  const [activeSubTab, setActiveSubTab] = useState<'today' | 'nexus' | 'college' | 'body'>('today');
-
-  // Real-time clock state
+// ============================================================================
+// ISOLATED LUXURY DIGITAL CLOCK & DYNAMIC GREETING
+// (Memoized so it ONLY updates the clock numbers without re-rendering the whole page!)
+// ============================================================================
+const LuxuryDigitalClock: React.FC = React.memo(() => {
   const [currentTime, setCurrentTime] = useState(() => new Date());
 
   useEffect(() => {
@@ -69,7 +64,6 @@ export const MobileFocusHub: React.FC<MobileFocusHubProps> = ({ onOpenSideDrawer
       minutes,
       seconds,
       period,
-      fullTime: `${displayHours}:${minutes}:${seconds} ${period}`,
     };
   }, [currentTime]);
 
@@ -86,7 +80,6 @@ export const MobileFocusHub: React.FC<MobileFocusHubProps> = ({ onOpenSideDrawer
     }
   }, [currentTime]);
 
-  // Dynamic Motivational Greeting based on hour of day
   const dynamicGreeting = useMemo(() => {
     const hour = currentTime.getHours();
     if (hour >= 4 && hour < 9) {
@@ -121,6 +114,44 @@ export const MobileFocusHub: React.FC<MobileFocusHubProps> = ({ onOpenSideDrawer
       };
     }
   }, [currentTime]);
+
+  return (
+    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-1">
+      {/* Clock Display */}
+      <div className="flex flex-col items-start bg-white/[0.04] border border-white/10 p-3 rounded-2xl min-w-[150px] w-full sm:w-auto shadow-sm">
+        <div className="flex items-baseline gap-1 text-white font-mono">
+          <span className="text-3xl font-black tracking-tight">{timeFormatted.hours}:{timeFormatted.minutes}</span>
+          <span className="text-xs text-zinc-400 font-mono">:{timeFormatted.seconds}</span>
+          <span className="text-[11px] px-1.5 py-0.5 rounded-md bg-white/10 text-white font-bold ml-1">{timeFormatted.period}</span>
+        </div>
+        <span className="text-[10px] text-zinc-400 mt-1 font-medium">{dateFormatted}</span>
+      </div>
+
+      {/* Dynamic Motivational Message */}
+      <div className="flex-1 text-right w-full sm:w-auto">
+        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/10 border border-white/15 text-[10px] font-bold text-white mb-1">
+          <Sparkles className="h-3 w-3" />
+          <span>{dynamicGreeting.tag}</span>
+        </div>
+        <h3 className="text-sm font-bold text-white tracking-tight">{dynamicGreeting.title}</h3>
+        <p className="text-[11px] text-zinc-300 leading-relaxed mt-0.5">{dynamicGreeting.quote}</p>
+      </div>
+    </div>
+  );
+});
+
+LuxuryDigitalClock.displayName = 'LuxuryDigitalClock';
+
+// ============================================================================
+// MAIN FOCUS HUB (Zero-Lag, Hardware-Accelerated Monochrome Lux)
+// ============================================================================
+export const MobileFocusHub: React.FC<MobileFocusHubProps> = ({ onOpenSideDrawer }) => {
+  const [plan, setPlan] = useState<DailyPersonalPlan>(() => PersonalFocusEngine.getTodayPlan());
+  const [copiedHook, setCopiedHook] = useState(false);
+  const [copiedReport, setCopiedReport] = useState(false);
+  const [backupStatus, setBackupStatus] = useState<string | null>(null);
+  const [showAlternativeMeal, setShowAlternativeMeal] = useState<Record<string, boolean>>({});
+  const [activeSubTab, setActiveSubTab] = useState<'today' | 'nexus' | 'college' | 'body'>('today');
 
   // Modals state
   const [showCalorieCalc, setShowCalorieCalc] = useState(false);
@@ -280,7 +311,7 @@ export const MobileFocusHub: React.FC<MobileFocusHubProps> = ({ onOpenSideDrawer
     <div className="flex flex-col h-full bg-black text-right font-sans select-none overflow-y-auto pb-44 px-3 sm:px-4 pt-3 space-y-3.5 overscroll-contain touch-pan-y">
       
       {/* 1. Header: Luxury Digital Clock, Dynamic Greeting & Side Drawer Trigger */}
-      <Glass className="p-4 sm:p-5 rounded-3xl apple-glass border border-white/10 shadow-2xl space-y-3.5">
+      <div className="p-4 sm:p-5 rounded-3xl apple-glass border border-white/10 shadow-2xl space-y-3.5">
         
         {/* Top Control Bar */}
         <div className="flex items-center justify-between pb-3 border-b border-white/5">
@@ -339,30 +370,8 @@ export const MobileFocusHub: React.FC<MobileFocusHubProps> = ({ onOpenSideDrawer
           </button>
         </div>
 
-        {/* Digital Clock & Dynamic Motivational Message */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-1">
-          
-          {/* Clock Display */}
-          <div className="flex flex-col items-start bg-white/[0.03] border border-white/5 p-3 rounded-2xl min-w-[150px] w-full sm:w-auto">
-            <div className="flex items-baseline gap-1 text-white font-mono">
-              <span className="text-3xl font-black tracking-tight">{timeFormatted.hours}:{timeFormatted.minutes}</span>
-              <span className="text-xs text-zinc-400 font-mono">:{timeFormatted.seconds}</span>
-              <span className="text-[11px] px-1.5 py-0.5 rounded-md bg-white/10 text-white font-bold ml-1">{timeFormatted.period}</span>
-            </div>
-            <span className="text-[10px] text-zinc-400 mt-1 font-medium">{dateFormatted}</span>
-          </div>
-
-          {/* Dynamic Motivational Message */}
-          <div className="flex-1 text-right w-full sm:w-auto">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/10 border border-white/15 text-[10px] font-bold text-white mb-1">
-              <Sparkles className="h-3 w-3" />
-              <span>{dynamicGreeting.tag}</span>
-            </div>
-            <h3 className="text-sm font-bold text-white tracking-tight">{dynamicGreeting.title}</h3>
-            <p className="text-[11px] text-zinc-300 leading-relaxed mt-0.5">{dynamicGreeting.quote}</p>
-          </div>
-
-        </div>
+        {/* Isolated Memoized Digital Clock & Dynamic Motivational Message */}
+        <LuxuryDigitalClock />
 
         {/* Sub-Banner: Shift Badge & Targets */}
         <div className="flex items-center justify-between pt-2.5 border-t border-white/5 text-[11px]">
@@ -376,7 +385,7 @@ export const MobileFocusHub: React.FC<MobileFocusHubProps> = ({ onOpenSideDrawer
             <span className="text-zinc-300 font-bold">هدف 70kg</span>
           </div>
         </div>
-      </Glass>
+      </div>
 
       {/* 2. Top Segmented Pills (Monochrome Lux Glass) */}
       <div className="flex items-center justify-between gap-1.5 bg-white/[0.03] p-1 rounded-2xl border border-white/5">
@@ -845,7 +854,7 @@ export const MobileFocusHub: React.FC<MobileFocusHubProps> = ({ onOpenSideDrawer
 
       {/* MODAL 1: Calorie & Macronutrient Calculator */}
       {showCalorieCalc && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-xl p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
           <div className="apple-glass w-full max-w-sm rounded-3xl p-5 border border-white/15 shadow-2xl space-y-3 text-right bg-[#0a0a0c]">
             <div className="flex items-center justify-between pb-2 border-b border-white/10">
               <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
@@ -896,7 +905,7 @@ export const MobileFocusHub: React.FC<MobileFocusHubProps> = ({ onOpenSideDrawer
 
       {/* MODAL 2: Add Custom Meal */}
       {showAddMealModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-xl p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
           <form onSubmit={handleAddCustomMeal} className="apple-glass w-full max-w-sm rounded-3xl p-5 border border-white/15 shadow-2xl space-y-3 text-right bg-[#0a0a0c]">
             <div className="flex items-center justify-between pb-2 border-b border-white/10">
               <h3 className="text-sm font-bold text-white">إضافة وجبة طاقة مخصصة</h3>
@@ -960,7 +969,7 @@ export const MobileFocusHub: React.FC<MobileFocusHubProps> = ({ onOpenSideDrawer
 
       {/* MODAL 3: Add Classroom Task */}
       {showAddTaskModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-xl p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
           <form onSubmit={handleAddClassroomTask} className="apple-glass w-full max-w-sm rounded-3xl p-5 border border-white/15 shadow-2xl space-y-3 text-right bg-[#0a0a0c]">
             <div className="flex items-center justify-between pb-2 border-b border-white/10">
               <h3 className="text-sm font-bold text-white">إضافة تكليف كلاس روم</h3>
@@ -1012,7 +1021,7 @@ export const MobileFocusHub: React.FC<MobileFocusHubProps> = ({ onOpenSideDrawer
 
       {/* MODAL 4: Rapid OTA / Live Update Checker */}
       {showUpdateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-xl p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
           <div className="apple-glass w-full max-w-sm rounded-3xl p-5 border border-white/15 shadow-2xl space-y-3 text-right bg-[#0a0a0c]">
             <div className="flex items-center justify-between pb-2 border-b border-white/10">
               <h3 className="text-sm font-bold text-white flex items-center gap-1.5">

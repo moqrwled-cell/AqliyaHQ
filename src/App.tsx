@@ -474,7 +474,7 @@ export function App() {
   }
 
   return (
-    <div className="h-screen max-h-screen w-screen overflow-hidden bg-[#060913] text-zinc-100 flex flex-col font-sans selection:bg-emerald-500/20">
+    <div className="h-screen max-h-screen w-screen overflow-hidden bg-black text-white flex flex-col font-sans selection:bg-white/20">
       {/* Header HUD */}
       <HeaderHUD
         onLock={() => setIsLocked(true)}
