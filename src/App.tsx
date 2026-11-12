@@ -27,34 +27,51 @@ import { SITREPBriefingModal } from './components/SITREPBriefingModal';
 import { WatchdogDrawer } from './components/WatchdogDrawer';
 import { HandsFreeVoiceCall } from './components/HandsFreeVoiceCall';
 import { SettingsModal } from './components/SettingsModal';
-import { MobileNav } from './components/MobileNav';
 import { MobileFocusHub } from './components/mobile/MobileFocusHub';
+import { MobileSideDrawer } from './components/mobile/MobileSideDrawer';
+import { DisciplineDashboard } from './components/dashboard/DisciplineDashboard';
+import { AlarmManagerModal } from './components/mobile/AlarmManagerModal';
+import { ClassroomBridgeModal } from './components/mobile/ClassroomBridgeModal';
 import { AlarmRingingOverlay } from './components/mobile/AlarmRingingOverlay';
 import { QuickCaptureModal } from './components/QuickCaptureModal';
 import { exportObsidianMarkdown, exportPureJSON } from './lib/exportMarkdown';
 import { scanSystemWatchdog } from './lib/watchdogEngine';
+import { Menu } from 'lucide-react';
 
 export function App() {
-  const [isLocked, setIsLocked] = useState(true);
+  const [isLocked, setIsLocked] = useState(() => {
+    try {
+      if (typeof window !== 'undefined' && localStorage.getItem('moha_auth_remembered_v1') === 'true') {
+        return false;
+      }
+    } catch (e) {}
+    return true;
+  });
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isBriefingOpen, setIsBriefingOpen] = useState(false);
   const [isWatchdogOpen, setIsWatchdogOpen] = useState(false);
-  const [activeMainView, setActiveMainView] = useState<'focus' | 'deck' | 'workspace' | 'vault_browser' | 'accounts' | 'swarm' | 'memory' | 'project_life' | 'opportunity_radar'>('deck');
+  const [isSideDrawerOpen, setIsSideDrawerOpen] = useState(false);
+  const [isAlarmModalOpen, setIsAlarmModalOpen] = useState(false);
+  const [isClassroomModalOpen, setIsClassroomModalOpen] = useState(false);
+  const [activeMainView, setActiveMainView] = useState<'focus' | 'discipline' | 'deck' | 'workspace' | 'vault_browser' | 'accounts' | 'swarm' | 'memory' | 'project_life' | 'opportunity_radar'>('deck');
   const [activeLayout, setActiveLayout] = useState<'tri-panel' | 'focused'>('tri-panel');
-  const [mobileTab, setMobileTab] = useState<'focus' | 'deck' | 'workspace' | 'missions' | 'vault_browser' | 'accounts' | 'intel' | 'radar' | 'swarm' | 'memory' | 'ai' | 'project_life' | 'opportunity_radar'>('focus');
+  const [mobileTab, setMobileTab] = useState<'focus' | 'discipline' | 'deck' | 'workspace' | 'missions' | 'vault_browser' | 'accounts' | 'intel' | 'radar' | 'swarm' | 'memory' | 'ai' | 'project_life' | 'opportunity_radar'>('focus');
   const [isVoiceCallOpen, setIsVoiceCallOpen] = useState(false);
   const [incomingSharedText, setIncomingSharedText] = useState<string | null>(null);
 
-  // Handle incoming Android system share intent
+  // Handle incoming Android system share intent & auto-unlock to capture directly
   useEffect(() => {
     if ((window as any).__AQLIYA_INITIAL_SHARE__) {
-      setIncomingSharedText((window as any).__AQLIYA_INITIAL_SHARE__);
+      const shareText = (window as any).__AQLIYA_INITIAL_SHARE__;
+      setIncomingSharedText(shareText);
+      setIsLocked(false);
       delete (window as any).__AQLIYA_INITIAL_SHARE__;
     }
 
     (window as any).onAqliyaSharedText = (text: string) => {
       if (text && text.trim()) {
         setIncomingSharedText(text.trim());
+        setIsLocked(false);
       }
     };
 
@@ -62,6 +79,13 @@ export function App() {
       delete (window as any).onAqliyaSharedText;
     };
   }, []);
+
+  // Ensure lockscreen is bypassed whenever a share arrives
+  useEffect(() => {
+    if (incomingSharedText) {
+      setIsLocked(false);
+    }
+  }, [incomingSharedText]);
 
   // Offline-First initial state loading
   const [missions, setMissions] = useState<Mission[]>(() => offlineStorage.get('missions', []));
@@ -537,6 +561,10 @@ export function App() {
               onUpdateDossier={handleUpdateDossier}
             />
           </div>
+        ) : activeMainView === 'discipline' ? (
+          <div className="hidden lg:flex flex-col h-full min-h-0 flex-1">
+            <DisciplineDashboard />
+          </div>
         ) : activeMainView === 'swarm' ? (
           <div className="hidden lg:flex flex-col h-full min-h-0 flex-1">
             <AgenticCommandDeck
@@ -612,113 +640,152 @@ export function App() {
         )}
 
         {/* Mobile View */}
-        <div className="lg:hidden h-[calc(100vh-140px)] min-h-0 overflow-hidden">
-          {mobileTab === 'focus' && (
-            <MobileFocusHub />
+        <div className="lg:hidden h-screen min-h-0 overflow-hidden flex flex-col bg-black">
+          {/* Universal Mobile Top Bar for tabs other than 'focus' */}
+          {mobileTab !== 'focus' && (
+            <div className="flex-shrink-0 apple-glass border-b border-white/10 px-4 py-3 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setIsSideDrawerOpen(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-white text-black font-bold text-xs shadow-md active:scale-95 transition-all"
+                >
+                  <Menu className="h-4 w-4" />
+                  <span>القائمة</span>
+                </button>
+                <button
+                  onClick={() => setMobileTab('focus')}
+                  className="px-2.5 py-1.5 rounded-xl bg-white/[0.05] border border-white/10 text-xs text-zinc-300 hover:text-white"
+                >
+                  خطة اليوم
+                </button>
+              </div>
+
+              <div className="text-right">
+                <span className="text-xs font-bold text-white block">
+                  {mobileTab === 'discipline' ? 'لوحة التطور والالتزام' :
+                   mobileTab === 'missions' ? 'المشاريع المركزية' :
+                   mobileTab === 'ai' ? 'المستشار الذكي' :
+                   mobileTab === 'deck' ? 'غرفة العمليات' :
+                   mobileTab === 'intel' ? 'بنك الاستخبارات' :
+                   mobileTab === 'memory' ? 'بنك الذاكرة' : 'Moha Agent'}
+                </span>
+                <span className="text-[10px] text-zinc-400">محمد قرمان • وضع الانضباط</span>
+              </div>
+            </div>
           )}
 
-          {mobileTab === 'deck' && (
-            <ExecutiveCommandCenter
-              missions={missions}
-              intel={intelItems}
-              directives={directives}
-              dossier={dossier}
-              memories={memories}
-              battleLogs={battleLogs}
-              watchdogAlerts={watchdogAlerts}
-              onNavigateSection={handleExecutiveSectionNavigation}
-              onOpenVoiceCall={() => setIsVoiceCallOpen(true)}
-              onOpenBriefing={() => setIsBriefingOpen(true)}
-              onOpenWatchdog={() => setIsWatchdogOpen(true)}
-              onSwitchToTacticalWorkspace={() => setMobileTab('missions')}
-            />
-          )}
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            {mobileTab === 'focus' && (
+              <MobileFocusHub onOpenSideDrawer={() => setIsSideDrawerOpen(true)} />
+            )}
 
-          {mobileTab === 'opportunity_radar' && (
-            <OpportunityRadarView />
-          )}
+            {mobileTab === 'discipline' && (
+              <DisciplineDashboard />
+            )}
 
-          {mobileTab === 'project_life' && (
-            <ProjectLifeIntelligenceHub />
-          )}
+            {mobileTab === 'deck' && (
+              <ExecutiveCommandCenter
+                missions={missions}
+                intel={intelItems}
+                directives={directives}
+                dossier={dossier}
+                memories={memories}
+                battleLogs={battleLogs}
+                watchdogAlerts={watchdogAlerts}
+                onNavigateSection={handleExecutiveSectionNavigation}
+                onOpenVoiceCall={() => setIsVoiceCallOpen(true)}
+                onOpenBriefing={() => setIsBriefingOpen(true)}
+                onOpenWatchdog={() => setIsWatchdogOpen(true)}
+                onSwitchToTacticalWorkspace={() => setMobileTab('missions')}
+              />
+            )}
 
-          {mobileTab === 'missions' && (
-            <MissionsPanel
-              missions={missions}
-              selectedMission={selectedMission}
-              intel={intelItems}
-              directives={directives}
-              onSelectMission={setSelectedMission}
-              onUpdateMission={handleUpdateMission}
-              onAddMission={handleAddMission}
-            />
-          )}
+            {mobileTab === 'opportunity_radar' && (
+              <OpportunityRadarView />
+            )}
 
-          {mobileTab === 'vault_browser' && (
-            <ProjectsVaultBrowser />
-          )}
+            {mobileTab === 'project_life' && (
+              <ProjectLifeIntelligenceHub />
+            )}
 
-          {mobileTab === 'accounts' && (
-            <AccountsVaultPanel />
-          )}
+            {mobileTab === 'missions' && (
+              <MissionsPanel
+                missions={missions}
+                selectedMission={selectedMission}
+                intel={intelItems}
+                directives={directives}
+                onSelectMission={setSelectedMission}
+                onUpdateMission={handleUpdateMission}
+                onAddMission={handleAddMission}
+              />
+            )}
 
-          {mobileTab === 'intel' && (
-            <IntelDepotPanel
-              items={intelItems}
-              missions={missions}
-              onAddItem={handleAddIntelItem}
-              onUpdateStatus={handleUpdateIntelStatus}
-            />
-          )}
+            {mobileTab === 'vault_browser' && (
+              <ProjectsVaultBrowser />
+            )}
 
-          {mobileTab === 'radar' && (
-            <GraphifyRadarPanel
-              missions={missions}
-              intel={intelItems}
-              directives={directives}
-              onSelectMission={setSelectedMission}
-              onTriggerGraphifyScan={() => {}}
-            />
-          )}
+            {mobileTab === 'accounts' && (
+              <AccountsVaultPanel />
+            )}
 
-          {mobileTab === 'memory' && (
-            <MindVaultPanel
-              dossier={dossier}
-              memories={memories}
-              battleLogs={battleLogs}
-              onAddMemory={handleAddMemory}
-              onDeleteMemory={handleDeleteMemory}
-              onUpdateDossier={handleUpdateDossier}
-            />
-          )}
+            {mobileTab === 'intel' && (
+              <IntelDepotPanel
+                items={intelItems}
+                missions={missions}
+                onAddItem={handleAddIntelItem}
+                onUpdateStatus={handleUpdateIntelStatus}
+              />
+            )}
 
-          {mobileTab === 'swarm' && (
-            <AgenticCommandDeck
-              missions={missions}
-              intel={intelItems}
-              memories={memories}
-              dossier={dossier}
-              battleLogs={battleLogs}
-              onOpenVoiceCall={() => setIsVoiceCallOpen(true)}
-              onStateMutation={handleStateMutation}
-            />
-          )}
+            {mobileTab === 'radar' && (
+              <GraphifyRadarPanel
+                missions={missions}
+                intel={intelItems}
+                directives={directives}
+                onSelectMission={setSelectedMission}
+                onTriggerGraphifyScan={() => {}}
+              />
+            )}
 
-          {mobileTab === 'ai' && (
-            <CommanderAIPanel
-              messages={chatMessages}
-              missions={missions}
-              intel={intelItems}
-              dossier={dossier}
-              memories={memories}
-              directives={directives}
-              battleLogs={battleLogs}
-              onSendMessage={handleAddChatMessage}
-              onOpenVoiceCall={() => setIsVoiceCallOpen(true)}
-              onOpenSettings={() => setIsSettingsOpen(true)}
-              onStateMutation={handleStateMutation}
-            />
-          )}
+            {mobileTab === 'memory' && (
+              <MindVaultPanel
+                dossier={dossier}
+                memories={memories}
+                battleLogs={battleLogs}
+                onAddMemory={handleAddMemory}
+                onDeleteMemory={handleDeleteMemory}
+                onUpdateDossier={handleUpdateDossier}
+              />
+            )}
+
+            {mobileTab === 'swarm' && (
+              <AgenticCommandDeck
+                missions={missions}
+                intel={intelItems}
+                memories={memories}
+                dossier={dossier}
+                battleLogs={battleLogs}
+                onOpenVoiceCall={() => setIsVoiceCallOpen(true)}
+                onStateMutation={handleStateMutation}
+              />
+            )}
+
+            {mobileTab === 'ai' && (
+              <CommanderAIPanel
+                messages={chatMessages}
+                missions={missions}
+                intel={intelItems}
+                dossier={dossier}
+                memories={memories}
+                directives={directives}
+                battleLogs={battleLogs}
+                onSendMessage={handleAddChatMessage}
+                onOpenVoiceCall={() => setIsVoiceCallOpen(true)}
+                onOpenSettings={() => setIsSettingsOpen(true)}
+                onStateMutation={handleStateMutation}
+              />
+            )}
+          </div>
         </div>
       </main>
 
@@ -781,12 +848,39 @@ export function App() {
         }}
       />
 
-      {/* Mobile Navigation */}
-      <MobileNav
+      {/* Mobile Side Navigation Drawer with written titles */}
+      <MobileSideDrawer
+        isOpen={isSideDrawerOpen}
+        onClose={() => setIsSideDrawerOpen(false)}
         activeTab={mobileTab}
-        onSelectTab={setMobileTab}
-        onQuickCapture={() => setMobileTab('intel')}
-        onOpenVoiceCall={() => setIsVoiceCallOpen(true)}
+        onSelectTab={(tab) => {
+          setMobileTab(tab);
+          setActiveMainView(tab);
+        }}
+        onOpenAlarm={() => setIsAlarmModalOpen(true)}
+        onOpenClassroom={() => setIsClassroomModalOpen(true)}
+        onOpenUpdate={() => {
+          // Open update modal in MobileFocusHub or trigger reload
+          window.location.reload();
+        }}
+        onLockSystem={() => {
+          try {
+            localStorage.removeItem('moha_auth_remembered_v1');
+          } catch (e) {}
+          setIsLocked(true);
+        }}
+      />
+
+      {/* Global Alarm Manager Modal */}
+      <AlarmManagerModal
+        isOpen={isAlarmModalOpen}
+        onClose={() => setIsAlarmModalOpen(false)}
+      />
+
+      {/* Classroom Bridge Modal */}
+      <ClassroomBridgeModal
+        isOpen={isClassroomModalOpen}
+        onClose={() => setIsClassroomModalOpen(false)}
       />
 
       {/* Global Alarm Overlay (رنين المنبه في أي مكان بالتطبيق) */}

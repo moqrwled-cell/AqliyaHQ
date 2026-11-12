@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   CheckCircle2, 
   Circle, 
@@ -16,19 +16,18 @@ import {
   AlertCircle, 
   ArrowRight,
   BookOpen,
-  ChevronDown,
-  ChevronUp,
   RefreshCw,
   Bell,
   BellRing,
   Calculator,
   Plus,
-  PlusCircle,
   X,
   Zap,
-  Edit3,
-  AlarmClock
+  AlarmClock,
+  Menu,
+  ChevronLeft
 } from 'lucide-react';
+import { Glass } from 'glisse';
 import { PersonalFocusEngine } from '../../lib/personal-focus/personalFocusEngine';
 import type { DailyPersonalPlan } from '../../lib/personal-focus/types';
 import { NotificationManager } from '../../lib/notifications/notificationManager';
@@ -37,13 +36,91 @@ import { AlarmManagerModal } from './AlarmManagerModal';
 import { ClassroomBridgeModal } from './ClassroomBridgeModal';
 import { AlarmRingingOverlay } from './AlarmRingingOverlay';
 
-export const MobileFocusHub: React.FC = () => {
+interface MobileFocusHubProps {
+  onOpenSideDrawer?: () => void;
+}
+
+export const MobileFocusHub: React.FC<MobileFocusHubProps> = ({ onOpenSideDrawer }) => {
   const [plan, setPlan] = useState<DailyPersonalPlan>(() => PersonalFocusEngine.getTodayPlan());
   const [copiedHook, setCopiedHook] = useState(false);
   const [copiedReport, setCopiedReport] = useState(false);
   const [backupStatus, setBackupStatus] = useState<string | null>(null);
   const [showAlternativeMeal, setShowAlternativeMeal] = useState<Record<string, boolean>>({});
   const [activeSubTab, setActiveSubTab] = useState<'today' | 'nexus' | 'college' | 'body'>('today');
+
+  // Real-time clock state
+  const [currentTime, setCurrentTime] = useState(() => new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const timeFormatted = useMemo(() => {
+    const hours = currentTime.getHours();
+    const minutes = String(currentTime.getMinutes()).padStart(2, '0');
+    const seconds = String(currentTime.getSeconds()).padStart(2, '0');
+    const period = hours >= 12 ? 'م' : 'ص';
+    const displayHours = String(hours % 12 || 12).padStart(2, '0');
+    return {
+      hours: displayHours,
+      minutes,
+      seconds,
+      period,
+      fullTime: `${displayHours}:${minutes}:${seconds} ${period}`,
+    };
+  }, [currentTime]);
+
+  const dateFormatted = useMemo(() => {
+    try {
+      return currentTime.toLocaleDateString('ar-EG', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
+    } catch (e) {
+      return currentTime.toLocaleDateString('en-US');
+    }
+  }, [currentTime]);
+
+  // Dynamic Motivational Greeting based on hour of day
+  const dynamicGreeting = useMemo(() => {
+    const hour = currentTime.getHours();
+    if (hour >= 4 && hour < 9) {
+      return {
+        title: 'بكور الفجر يصنع القادة',
+        quote: 'همّة الصباح الباكر تبني صرح نيكسيس وتصنع فارق الأساطير يا محمد.',
+        tag: 'انطلاقة الفجر',
+      };
+    } else if (hour >= 9 && hour < 14) {
+      return {
+        title: 'ذروة التركيز والإنتاج',
+        quote: 'لا تشتت نفسك؛ 20 إيميل لنائب ومحامٍ تصنع أول صفقة بـ $199.',
+        tag: 'تركيز استراتيجي',
+      };
+    } else if (hour >= 14 && hour < 18) {
+      return {
+        title: 'ثبات الوتيرة والالتزام',
+        quote: 'حافظ على طاقتك، لا تدع السعرات 3000kcal وتكليفات الكلية تفوتك اليوم.',
+        tag: 'انضباط صارم',
+      };
+    } else if (hour >= 18 && hour < 23) {
+      return {
+        title: 'حصاد الإنجاز والهمّة',
+        quote: 'اليوم الذي ينقضي لا يعود؛ استعرض تقدمك واختم يومك بانتصار حقيقي.',
+        tag: 'حصاد اليوم',
+      };
+    } else {
+      return {
+        title: 'هدوء التخطيط وصناعة الغد',
+        quote: 'راحة المحارب استعداداً لغد عظيم؛ استثمر السكون بمراجعة بوصلتك.',
+        tag: 'إعداد المستشار',
+      };
+    }
+  }, [currentTime]);
 
   // Modals state
   const [showCalorieCalc, setShowCalorieCalc] = useState(false);
@@ -191,45 +268,40 @@ export const MobileFocusHub: React.FC = () => {
 
   const calorieData = PersonalFocusEngine.calculateCalorieSurplus(182, 54, 70, 21);
 
-  return (
-    <div className="flex flex-col h-full bg-[#060913] text-right font-sans select-none overflow-y-auto pb-24 px-3 sm:px-4 pt-3">
-      
-      {/* 1. Header: Brand Avatar & Quick Actions */}
-      <div className="p-4 rounded-3xl apple-glass border border-white/10 mb-3 shadow-lg">
-        <div className="flex items-center justify-between gap-3 mb-2.5">
-          
-          {/* Avatar & Title */}
-          <div className="flex items-center gap-2.5">
-            <div className="relative h-11 w-11 rounded-2xl overflow-hidden border border-emerald-400/40 shadow-md shadow-emerald-950/60 bg-zinc-900 flex-shrink-0">
-              <img src="/logo.png" alt="Moha Agent" className="w-full h-full object-cover" />
-              <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-500 border-2 border-zinc-950" />
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <h2 className="text-sm font-extrabold text-white">Moha Agent</h2>
-                <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/15 text-emerald-300 font-mono">v1.2</span>
-              </div>
-              <p className="text-[11px] text-zinc-400 font-medium">مرحباً يا بطل 🫡 • محمد قرمان</p>
-            </div>
-          </div>
+  const triggerDrawer = () => {
+    if (onOpenSideDrawer) {
+      onOpenSideDrawer();
+    } else {
+      window.dispatchEvent(new CustomEvent('moha:open-side-drawer'));
+    }
+  };
 
-          {/* Quick Buttons: Telegram + Notification */}
+  return (
+    <div className="flex flex-col h-full bg-black text-right font-sans select-none overflow-y-auto pb-44 px-3 sm:px-4 pt-3 space-y-3.5 overscroll-contain touch-pan-y">
+      
+      {/* 1. Header: Luxury Digital Clock, Dynamic Greeting & Side Drawer Trigger */}
+      <Glass className="p-4 sm:p-5 rounded-3xl apple-glass border border-white/10 shadow-2xl space-y-3.5">
+        
+        {/* Top Control Bar */}
+        <div className="flex items-center justify-between pb-3 border-b border-white/5">
+          
+          {/* Quick Action Icons in Monochrome Lux */}
           <div className="flex items-center gap-1.5">
             <button
               onClick={handleCopyTelegramReport}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[11px] font-semibold active:scale-95 transition-all"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-white/[0.05] border border-white/10 text-white text-[11px] font-semibold active:scale-95 transition-all hover:bg-white/10"
               title="نسخ تقرير اليوم للتيليجرام"
             >
-              {copiedReport ? <Check className="h-3 w-3 text-emerald-400" /> : <Send className="h-3 w-3" />}
-              <span>{copiedReport ? 'تم النسخ!' : 'تقرير'}</span>
+              {copiedReport ? <Check className="h-3 w-3 text-white" /> : <Send className="h-3 w-3" />}
+              <span>{copiedReport ? 'تم النسخ' : 'تقرير'}</span>
             </button>
 
             <button
               onClick={handleRequestNotifications}
               className={`p-2 rounded-xl border transition-all active:scale-95 ${
                 notifGranted
-                  ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
-                  : 'bg-amber-500/20 text-amber-300 border-amber-500/40 animate-pulse'
+                  ? 'bg-white/10 text-white border-white/20'
+                  : 'bg-white/[0.04] text-zinc-400 border-white/10 animate-pulse'
               }`}
               title={notifGranted ? 'الإشعارات مفعلة' : 'اضغط لتفعيل إشعارات الهاتف'}
             >
@@ -238,8 +310,8 @@ export const MobileFocusHub: React.FC = () => {
 
             <button
               onClick={() => setShowAlarmModal(true)}
-              className="p-2 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 hover:text-white transition-all active:scale-95"
-              title="منبه Moha الذكي (ضبط المنبه والنغمات)"
+              className="p-2 rounded-xl bg-white/[0.05] border border-white/10 text-white hover:bg-white/10 transition-all active:scale-95"
+              title="منبه Moha الذكي"
             >
               <AlarmClock className="h-4 w-4" />
             </button>
@@ -249,36 +321,70 @@ export const MobileFocusHub: React.FC = () => {
                 setShowUpdateModal(true);
                 handleCheckUpdate();
               }}
-              className="p-2 rounded-xl bg-white/[0.04] border border-white/10 text-cyan-400 hover:text-white transition-all active:scale-95"
-              title="تحديث المنظومة وتطبيق التعديلات فورياً"
+              className="p-2 rounded-xl bg-white/[0.05] border border-white/10 text-white hover:bg-white/10 transition-all active:scale-95"
+              title="تحديث المنظومة الفوري"
             >
               <Zap className="h-4 w-4" />
             </button>
           </div>
+
+          {/* Menu Drawer Button with Written Text */}
+          <button
+            onClick={triggerDrawer}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-white text-black font-bold text-xs shadow-lg active:scale-95 transition-all hover:bg-zinc-200"
+            aria-label="فتح القائمة الجانبية"
+          >
+            <span>القائمة</span>
+            <Menu className="h-4 w-4 stroke-[2.5]" />
+          </button>
         </div>
 
-        {/* Work Shift Badge & Quick Summary */}
-        <div className="flex items-center justify-between pt-2 border-t border-white/5">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-2xl bg-white/[0.04] border border-white/5 text-[11px] text-zinc-300">
-            <Clock className="h-3.5 w-3.5 text-emerald-400" />
-            <span className="font-medium">{plan.shiftBadge}</span>
+        {/* Digital Clock & Dynamic Motivational Message */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-1">
+          
+          {/* Clock Display */}
+          <div className="flex flex-col items-start bg-white/[0.03] border border-white/5 p-3 rounded-2xl min-w-[150px] w-full sm:w-auto">
+            <div className="flex items-baseline gap-1 text-white font-mono">
+              <span className="text-3xl font-black tracking-tight">{timeFormatted.hours}:{timeFormatted.minutes}</span>
+              <span className="text-xs text-zinc-400 font-mono">:{timeFormatted.seconds}</span>
+              <span className="text-[11px] px-1.5 py-0.5 rounded-md bg-white/10 text-white font-bold ml-1">{timeFormatted.period}</span>
+            </div>
+            <span className="text-[10px] text-zinc-400 mt-1 font-medium">{dateFormatted}</span>
           </div>
 
-          <div className="flex items-center gap-2 text-[11px] text-zinc-400">
-            <span className="text-amber-400 font-mono font-bold">{plan.nutritionAndWorkout.targetCalories} kcal</span>
-            <span>•</span>
-            <span className="text-emerald-400 font-bold">هدف 70kg</span>
+          {/* Dynamic Motivational Message */}
+          <div className="flex-1 text-right w-full sm:w-auto">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/10 border border-white/15 text-[10px] font-bold text-white mb-1">
+              <Sparkles className="h-3 w-3" />
+              <span>{dynamicGreeting.tag}</span>
+            </div>
+            <h3 className="text-sm font-bold text-white tracking-tight">{dynamicGreeting.title}</h3>
+            <p className="text-[11px] text-zinc-300 leading-relaxed mt-0.5">{dynamicGreeting.quote}</p>
+          </div>
+
+        </div>
+
+        {/* Sub-Banner: Shift Badge & Targets */}
+        <div className="flex items-center justify-between pt-2.5 border-t border-white/5 text-[11px]">
+          <div className="inline-flex items-center gap-1.5 text-zinc-400">
+            <Clock className="h-3.5 w-3.5 text-white" />
+            <span>{plan.shiftBadge}</span>
+          </div>
+          <div className="flex items-center gap-2 font-mono">
+            <span className="text-white font-bold">{plan.nutritionAndWorkout.targetCalories} kcal</span>
+            <span className="text-zinc-600">•</span>
+            <span className="text-zinc-300 font-bold">هدف 70kg</span>
           </div>
         </div>
-      </div>
+      </Glass>
 
-      {/* 2. Top Segmented Pills (Only 4 Pillars) */}
-      <div className="flex items-center justify-between gap-1.5 mb-3 bg-white/[0.03] p-1 rounded-2xl border border-white/5">
+      {/* 2. Top Segmented Pills (Monochrome Lux Glass) */}
+      <div className="flex items-center justify-between gap-1.5 bg-white/[0.03] p-1 rounded-2xl border border-white/5">
         <button
           onClick={() => setActiveSubTab('today')}
           className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all text-center ${
             activeSubTab === 'today'
-              ? 'bg-emerald-500 text-zinc-950 shadow-md'
+              ? 'bg-white text-black shadow-md'
               : 'text-zinc-400 hover:text-white'
           }`}
         >
@@ -289,7 +395,7 @@ export const MobileFocusHub: React.FC = () => {
           onClick={() => setActiveSubTab('nexus')}
           className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all text-center ${
             activeSubTab === 'nexus'
-              ? 'bg-emerald-500 text-zinc-950 shadow-md'
+              ? 'bg-white text-black shadow-md'
               : 'text-zinc-400 hover:text-white'
           }`}
         >
@@ -300,7 +406,7 @@ export const MobileFocusHub: React.FC = () => {
           onClick={() => setActiveSubTab('college')}
           className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all text-center ${
             activeSubTab === 'college'
-              ? 'bg-emerald-500 text-zinc-950 shadow-md'
+              ? 'bg-white text-black shadow-md'
               : 'text-zinc-400 hover:text-white'
           }`}
         >
@@ -311,7 +417,7 @@ export const MobileFocusHub: React.FC = () => {
           onClick={() => setActiveSubTab('body')}
           className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all text-center ${
             activeSubTab === 'body'
-              ? 'bg-emerald-500 text-zinc-950 shadow-md'
+              ? 'bg-white text-black shadow-md'
               : 'text-zinc-400 hover:text-white'
           }`}
         >
@@ -321,7 +427,7 @@ export const MobileFocusHub: React.FC = () => {
 
       {/* 3. SUBTAB: TODAY (MAIN CLEAN BATTLE PLAN) */}
       {activeSubTab === 'today' && (
-        <div className="space-y-3">
+        <div className="space-y-3 animate-in fade-in duration-200">
           
           {/* Card A: College & Classroom Tasks */}
           <div className="p-4 rounded-3xl apple-glass border border-white/10 space-y-2.5">
@@ -329,7 +435,7 @@ export const MobileFocusHub: React.FC = () => {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setShowClassroomModal(true)}
-                  className="px-2 py-1 rounded-xl bg-blue-500/15 border border-blue-500/30 text-blue-300 hover:text-white flex items-center gap-1 text-[10px] font-bold active:scale-95 transition-all"
+                  className="px-2 py-1 rounded-xl bg-white/10 border border-white/20 text-white flex items-center gap-1 text-[10px] font-bold active:scale-95 transition-all"
                   title="ربط واستيراد إعلانات كلاس روم"
                 >
                   <Sparkles className="h-3 w-3" />
@@ -337,14 +443,14 @@ export const MobileFocusHub: React.FC = () => {
                 </button>
                 <button
                   onClick={() => setShowAddTaskModal(true)}
-                  className="text-[11px] text-emerald-400 hover:underline flex items-center gap-1 font-bold"
+                  className="text-[11px] text-zinc-300 hover:text-white hover:underline flex items-center gap-1 font-bold"
                 >
                   <Plus className="h-3 w-3" />
                   <span>إضافة مهمة</span>
                 </button>
               </div>
               <div className="flex items-center gap-1.5 text-xs font-bold text-white">
-                <GraduationCap className="h-4 w-4 text-emerald-400" />
+                <GraduationCap className="h-4 w-4 text-white" />
                 <span>الكلية والكلاس روم</span>
               </div>
             </div>
@@ -356,18 +462,18 @@ export const MobileFocusHub: React.FC = () => {
                   onClick={() => handleToggleClassroom(task.id)}
                   className={`flex items-start justify-between gap-3 p-3 rounded-2xl border transition-all cursor-pointer ${
                     task.completed
-                      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-200'
-                      : 'bg-white/[0.02] border-white/5 text-zinc-200 hover:bg-white/[0.05]'
+                      ? 'bg-white/10 border-white/20 text-zinc-300'
+                      : 'bg-white/[0.02] border-white/5 text-white hover:bg-white/[0.05]'
                   }`}
                 >
-                  <p className={`text-xs font-medium leading-relaxed ${task.completed ? 'line-through opacity-70' : ''}`}>
+                  <p className={`text-xs font-medium leading-relaxed ${task.completed ? 'line-through opacity-60' : ''}`}>
                     {task.taskTitle}
                   </p>
                   <button className="mt-0.5 flex-shrink-0">
                     {task.completed ? (
-                      <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                      <CheckCircle2 className="h-4 w-4 text-white" />
                     ) : (
-                      <Circle className="h-4 w-4 text-zinc-500" />
+                      <Circle className="h-4 w-4 text-zinc-600" />
                     )}
                   </button>
                 </div>
@@ -378,11 +484,11 @@ export const MobileFocusHub: React.FC = () => {
           {/* Card B: Nexus Legal Cold Email Targets */}
           <div className="p-4 rounded-3xl apple-glass border border-white/10 space-y-3">
             <div className="flex items-center justify-between pb-1.5 border-b border-white/5">
-              <span className="text-[11px] font-mono text-emerald-400 font-bold">
+              <span className="text-[11px] font-mono text-white font-bold bg-white/10 px-2 py-0.5 rounded-full border border-white/15">
                 {plan.nexusTargets.sentCount}/{plan.nexusTargets.dailyEmailTarget} إيميل
               </span>
               <div className="flex items-center gap-1.5 text-xs font-bold text-white">
-                <Briefcase className="h-4 w-4 text-blue-400" />
+                <Briefcase className="h-4 w-4 text-white" />
                 <span>مشروع نيكسيس للمحامين</span>
               </div>
             </div>
@@ -395,14 +501,14 @@ export const MobileFocusHub: React.FC = () => {
               <div className="flex items-center justify-between text-[11px]">
                 <button
                   onClick={handleCopyHook}
-                  className="flex items-center gap-1 text-emerald-400 hover:text-emerald-300 font-semibold"
+                  className="flex items-center gap-1 text-white hover:text-zinc-300 font-semibold"
                 >
-                  {copiedHook ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                  {copiedHook ? <Check className="h-3 w-3 text-white" /> : <Copy className="h-3 w-3" />}
                   <span>{copiedHook ? 'تم النسخ' : 'نسخ الإنجليزية'}</span>
                 </button>
                 <span className="text-zinc-400 font-medium">خطاف الرسالة القانونية (ABA 512):</span>
               </div>
-              <p className="text-[11px] text-zinc-300 font-mono text-left dir-ltr leading-relaxed bg-black/30 p-2 rounded-xl select-all">
+              <p className="text-[11px] text-zinc-300 font-mono text-left dir-ltr leading-relaxed bg-black/40 p-2 rounded-xl select-all border border-white/5">
                 {plan.nexusTargets.recommendedHook}
               </p>
             </div>
@@ -416,7 +522,7 @@ export const MobileFocusHub: React.FC = () => {
               </button>
               <button
                 onClick={() => handleIncrementNexus(1)}
-                className="flex-1 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-xs font-bold text-emerald-300 active:scale-95 transition-all text-center"
+                className="flex-1 py-2 rounded-xl bg-white text-black hover:bg-zinc-200 border border-white text-xs font-bold active:scale-95 transition-all text-center shadow-md"
               >
                 +1 إيميل فردي
               </button>
@@ -429,7 +535,7 @@ export const MobileFocusHub: React.FC = () => {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setShowCalorieCalc(true)}
-                  className="text-[10px] px-2 py-0.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-300 font-mono flex items-center gap-1"
+                  className="text-[10px] px-2 py-0.5 rounded-lg bg-white/10 border border-white/20 text-white font-mono flex items-center gap-1"
                   title="حاسبة السعرات"
                 >
                   <Calculator className="h-3 w-3" />
@@ -437,7 +543,7 @@ export const MobileFocusHub: React.FC = () => {
                 </button>
                 <button
                   onClick={() => setShowAddMealModal(true)}
-                  className="text-[11px] text-emerald-400 hover:underline flex items-center gap-1 font-bold"
+                  className="text-[11px] text-zinc-300 hover:text-white hover:underline flex items-center gap-1 font-bold"
                 >
                   <Plus className="h-3 w-3" />
                   <span>وجبة</span>
@@ -445,7 +551,7 @@ export const MobileFocusHub: React.FC = () => {
               </div>
 
               <div className="flex items-center gap-1.5 text-xs font-bold text-white">
-                <Flame className="h-4 w-4 text-amber-400" />
+                <Flame className="h-4 w-4 text-white" />
                 <span>وجبات السعرات الكثيفة (بدون خلاط)</span>
               </div>
             </div>
@@ -458,7 +564,7 @@ export const MobileFocusHub: React.FC = () => {
                     key={meal.id}
                     className={`p-3 rounded-2xl border transition-all ${
                       meal.completed
-                        ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-100'
+                        ? 'bg-white/10 border-white/20 text-zinc-300'
                         : 'bg-white/[0.02] border-white/5 text-zinc-200'
                     }`}
                   >
@@ -469,19 +575,19 @@ export const MobileFocusHub: React.FC = () => {
                           className="flex-shrink-0"
                         >
                           {meal.completed ? (
-                            <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                            <CheckCircle2 className="h-4 w-4 text-white" />
                           ) : (
-                            <Circle className="h-4 w-4 text-zinc-500" />
+                            <Circle className="h-4 w-4 text-zinc-600" />
                           )}
                         </button>
-                        <span className="text-xs font-bold">{meal.title}</span>
+                        <span className="text-xs font-bold text-white">{meal.title}</span>
                       </div>
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300 font-mono">
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/10 border border-white/15 text-white font-mono">
                         +{meal.calories} سعرة
                       </span>
                     </div>
 
-                    <p className="text-[11px] text-zinc-300 pr-6 leading-relaxed">
+                    <p className="text-[11px] text-zinc-400 pr-6 leading-relaxed">
                       {showAlt ? meal.alternativeMeal : meal.ingredients}
                     </p>
 
@@ -489,7 +595,7 @@ export const MobileFocusHub: React.FC = () => {
                       onClick={() =>
                         setShowAlternativeMeal((prev) => ({ ...prev, [meal.id]: !prev[meal.id] }))
                       }
-                      className="mt-1.5 text-[10px] text-zinc-400 hover:text-white pr-6 underline flex items-center gap-1"
+                      className="mt-1.5 text-[10px] text-zinc-500 hover:text-white pr-6 underline flex items-center gap-1"
                     >
                       <span>{showAlt ? 'عرض الوجبة الأساسية' : 'غير متوفر؟ عرض الوجبة البديلة'}</span>
                     </button>
@@ -504,7 +610,7 @@ export const MobileFocusHub: React.FC = () => {
             <div className="flex items-center justify-between pb-1.5 border-b border-white/5">
               <span className="text-[11px] text-zinc-400">40 دقيقة + 10 دقائق مرونة</span>
               <div className="flex items-center gap-1.5 text-xs font-bold text-white">
-                <Dumbbell className="h-4 w-4 text-emerald-400" />
+                <Dumbbell className="h-4 w-4 text-white" />
                 <span>تمرين اليوم المنزلي (Calisthenics)</span>
               </div>
             </div>
@@ -512,10 +618,10 @@ export const MobileFocusHub: React.FC = () => {
             <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/5 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-white">{plan.nutritionAndWorkout.workoutTitle}</span>
-                <span className="text-[10px] text-emerald-400 font-mono">علمي لزيادة الكتلة</span>
+                <span className="text-[10px] text-zinc-300 font-mono">علمي لزيادة الكتلة</span>
               </div>
 
-              <div className="space-y-1.5 pr-2 border-r-2 border-emerald-500/40">
+              <div className="space-y-1.5 pr-2 border-r-2 border-white/40">
                 {plan.nutritionAndWorkout.workoutExercises.map((ex, idx) => (
                   <p key={idx} className="text-[11px] text-zinc-300">
                     • {ex}
@@ -524,12 +630,12 @@ export const MobileFocusHub: React.FC = () => {
               </div>
 
               <div className="pt-2 border-t border-white/5 flex items-center justify-between">
-                <span className="text-[11px] text-amber-300 font-medium">10 دقائق استطالة مفاصل ومرونة</span>
+                <span className="text-[11px] text-zinc-400 font-medium">10 دقائق استطالة مفاصل ومرونة</span>
                 <button
                   onClick={handleToggleWorkout}
                   className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition-all ${
                     plan.nutritionAndWorkout.workoutCompleted
-                      ? 'bg-emerald-500 text-zinc-950 border-emerald-400'
+                      ? 'bg-white text-black border-white shadow-md'
                       : 'bg-white/[0.04] text-zinc-300 border-white/10'
                   }`}
                 >
@@ -543,7 +649,7 @@ export const MobileFocusHub: React.FC = () => {
           <div className="p-4 rounded-3xl apple-glass border border-white/10 flex items-center justify-between gap-3">
             <div>
               <div className="flex items-center gap-2">
-                <Coffee className="h-4 w-4 text-amber-400" />
+                <Coffee className="h-4 w-4 text-white" />
                 <h4 className="text-xs font-bold text-white">كافيه روما (حماية الديون)</h4>
               </div>
               <p className="text-[11px] text-zinc-400 mt-0.5">
@@ -553,7 +659,7 @@ export const MobileFocusHub: React.FC = () => {
 
             <button
               onClick={handleBackupRomaCafe}
-              className="px-3.5 py-2 rounded-2xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-xs font-bold text-emerald-400 active:scale-95 transition-all flex items-center gap-1.5 flex-shrink-0"
+              className="px-3.5 py-2 rounded-2xl bg-white/[0.05] hover:bg-white/10 border border-white/10 text-xs font-bold text-white active:scale-95 transition-all flex items-center gap-1.5 flex-shrink-0"
             >
               <ShieldCheck className="h-3.5 w-3.5" />
               <span>نسخ احتياطي</span>
@@ -564,7 +670,7 @@ export const MobileFocusHub: React.FC = () => {
           <div className="p-4 rounded-3xl apple-glass border border-white/10 flex items-center justify-between gap-3">
             <div>
               <div className="flex items-center gap-2">
-                <BookOpen className="h-4 w-4 text-blue-400" />
+                <BookOpen className="h-4 w-4 text-white" />
                 <h4 className="text-xs font-bold text-white">15 دقيقة إنجليزية + كورسيرا</h4>
               </div>
               <p className="text-[11px] text-zinc-400 mt-0.5">
@@ -576,11 +682,11 @@ export const MobileFocusHub: React.FC = () => {
               onClick={handleToggleEnglish}
               className={`p-2 rounded-2xl border text-xs font-bold transition-all ${
                 plan.selfGrowth.englishCompleted
-                  ? 'bg-emerald-500 text-zinc-950 border-emerald-400'
+                  ? 'bg-white text-black border-white'
                   : 'bg-white/[0.04] text-zinc-300 border-white/10'
               }`}
             >
-              {plan.selfGrowth.englishCompleted ? <Check className="h-4 w-4" /> : 'إنجاز'}
+              {plan.selfGrowth.englishCompleted ? <Check className="h-4 w-4 text-black" /> : 'إنجاز'}
             </button>
           </div>
 
@@ -592,20 +698,20 @@ export const MobileFocusHub: React.FC = () => {
         <div className="space-y-3 animate-in fade-in duration-200">
           <div className="p-4 rounded-3xl apple-glass border border-white/10 space-y-3">
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <Briefcase className="h-4 w-4 text-blue-400" />
+              <Briefcase className="h-4 w-4 text-white" />
               <span>استراتيجية مبيعات نيكسيس للمحامين الأمريكيين</span>
             </h3>
 
-            <div className="p-3 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-xs text-blue-200 space-y-1">
-              <p className="font-bold">القاعدة الذهبية لتحقيق أول بيعة:</p>
-              <p className="text-[11px] leading-relaxed">
+            <div className="p-3 rounded-2xl bg-white/[0.04] border border-white/10 text-xs text-zinc-200 space-y-1">
+              <p className="font-bold text-white">القاعدة الذهبية لتحقيق أول بيعة:</p>
+              <p className="text-[11px] leading-relaxed text-zinc-300">
                 لا تطلب من المحامي $199 مباشرة من أول رسالة! اعرض عليه تجربة مجانية 14 يوماً بدون بطاقة بنكية، توضح كيف تعمل الأداة على الرام دون إنترنت لمنع تسريب أسرار الموكلين (ABA 512).
               </p>
             </div>
 
             <div className="space-y-2">
               <label className="text-xs font-bold text-zinc-300 block">صيغة الإيميل البارد المعتمدة:</label>
-              <div className="p-3 rounded-2xl bg-black/40 border border-white/10 font-mono text-[11px] text-zinc-300 text-left dir-ltr select-all space-y-2">
+              <div className="p-3 rounded-2xl bg-black/50 border border-white/10 font-mono text-[11px] text-zinc-300 text-left dir-ltr select-all space-y-2">
                 <p><strong>Subject:</strong> Privileged document analysis without cloud data leakage</p>
                 <p>Hi [Attorney Name],</p>
                 <p>Under ABA Formal Opinion 512, sending privileged client files to public AI servers poses serious confidentiality risks.</p>
@@ -619,7 +725,7 @@ export const MobileFocusHub: React.FC = () => {
                   navigator.clipboard.writeText(`Subject: Privileged document analysis without cloud data leakage\n\nHi [Attorney Name],\n\nUnder ABA Formal Opinion 512, sending privileged client files to public AI servers poses serious confidentiality risks.\n\nWe built Nexus Legal AI to run 100% in RAM locally on your laptop—zero internet connection required, zero data stored.\n\nWould you be open to a 14-day zero-risk trial on your local PC to see how it audits case files securely?\n\nBest regards,\nMohammad Qrman — Lead Systems Architect`);
                   alert('تم نسخ نص الإيميل بالكامل للحافظة!');
                 }}
-                className="w-full py-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-xs shadow-md transition-all active:scale-95 flex items-center justify-center gap-2"
+                className="w-full py-2.5 rounded-2xl bg-white hover:bg-zinc-200 text-black font-bold text-xs shadow-md transition-all active:scale-95 flex items-center justify-center gap-2"
               >
                 <Copy className="h-3.5 w-3.5" />
                 <span>نسخ نص الإيميل الأمريكي بالكامل</span>
@@ -636,13 +742,13 @@ export const MobileFocusHub: React.FC = () => {
             <div className="flex items-center justify-between">
               <button
                 onClick={() => setShowAddTaskModal(true)}
-                className="px-3 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-bold flex items-center gap-1"
+                className="px-3 py-1.5 rounded-xl bg-white/10 border border-white/20 text-white text-xs font-bold flex items-center gap-1 hover:bg-white/15"
               >
                 <Plus className="h-3.5 w-3.5" />
                 <span>إضافة تكليف / محاضرة</span>
               </button>
               <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <GraduationCap className="h-4 w-4 text-emerald-400" />
+                <GraduationCap className="h-4 w-4 text-white" />
                 <span>الكلية التطبيقية • كلاس روم</span>
               </h3>
             </div>
@@ -658,7 +764,7 @@ export const MobileFocusHub: React.FC = () => {
                     <p className="text-xs font-bold text-white">{t.taskTitle}</p>
                     <span className="text-[10px] text-zinc-400">{t.subject}</span>
                   </div>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 font-mono">
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-white font-mono border border-white/15">
                     {t.completed ? 'منجز' : 'نشط'}
                   </span>
                 </div>
@@ -668,9 +774,9 @@ export const MobileFocusHub: React.FC = () => {
             <div className="p-3.5 rounded-2xl bg-white/[0.02] border border-white/5 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-white">مسار الشهادات في Coursera:</span>
-                <span className="text-[10px] text-emerald-400 font-mono">CV Builder</span>
+                <span className="text-[10px] text-zinc-300 font-mono">CV Builder</span>
               </div>
-              <p className="text-xs text-emerald-300 font-medium">
+              <p className="text-xs text-white font-medium">
                 {plan.selfGrowth.courseraModuleTitle}
               </p>
             </div>
@@ -685,27 +791,27 @@ export const MobileFocusHub: React.FC = () => {
             <div className="flex items-center justify-between">
               <button
                 onClick={() => setShowCalorieCalc(true)}
-                className="px-3 py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-bold flex items-center gap-1.5"
+                className="px-3 py-1.5 rounded-xl bg-white/10 border border-white/20 text-white text-xs font-bold flex items-center gap-1.5"
               >
                 <Calculator className="h-3.5 w-3.5" />
                 <span>حاسبة السعرات</span>
               </button>
               <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <Flame className="h-4 w-4 text-amber-400" />
+                <Flame className="h-4 w-4 text-white" />
                 <span>خطة زيادة الوزن (من 54 إلى 70 كجم)</span>
               </h3>
             </div>
 
             <div className="p-3 rounded-2xl bg-white/[0.03] border border-white/5 space-y-2">
               <div className="flex items-center justify-between text-xs font-bold">
-                <span className="text-emerald-400">الوزن الحالي: 54 كجم</span>
+                <span className="text-white">الوزن الحالي: 54 كجم</span>
                 <span className="text-zinc-400">الهدف: 70 كجم</span>
               </div>
               <div className="w-full bg-white/10 h-2 rounded-full overflow-hidden">
-                <div className="bg-gradient-to-r from-amber-400 to-emerald-400 h-full w-[35%]" />
+                <div className="bg-white h-full w-[35%]" />
               </div>
               <p className="text-[11px] text-zinc-400">
-                الهدف اليومي: <strong>{plan.nutritionAndWorkout.targetCalories} سعرة</strong> و <strong>115 غرام بروتين</strong> لبناء كتلة ومرونة.
+                الهدف اليومي: <strong className="text-white">{plan.nutritionAndWorkout.targetCalories} سعرة</strong> و <strong className="text-white">115 غرام بروتين</strong> لبناء كتلة ومرونة.
               </p>
             </div>
 
@@ -713,7 +819,7 @@ export const MobileFocusHub: React.FC = () => {
               <div className="flex items-center justify-between">
                 <button
                   onClick={() => setShowAddMealModal(true)}
-                  className="text-xs text-emerald-400 font-bold hover:underline flex items-center gap-1"
+                  className="text-xs text-zinc-300 font-bold hover:text-white hover:underline flex items-center gap-1"
                 >
                   <Plus className="h-3 w-3" />
                   <span>إضافة وجبة</span>
@@ -728,7 +834,7 @@ export const MobileFocusHub: React.FC = () => {
                       <p className="font-bold text-white">{m.title}</p>
                       <p className="text-[10px] text-zinc-400">{m.ingredients}</p>
                     </div>
-                    <span className="font-mono text-amber-400 text-xs">+{m.calories} سعرة</span>
+                    <span className="font-mono text-white text-xs">+{m.calories} سعرة</span>
                   </div>
                 ))}
               </div>
@@ -739,11 +845,11 @@ export const MobileFocusHub: React.FC = () => {
 
       {/* MODAL 1: Calorie & Macronutrient Calculator */}
       {showCalorieCalc && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xl p-4">
-          <div className="apple-glass-elevated w-full max-w-sm rounded-3xl p-5 border border-white/10 shadow-2xl space-y-3 text-right">
-            <div className="flex items-center justify-between pb-2 border-b border-white/5">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-xl p-4">
+          <div className="apple-glass w-full max-w-sm rounded-3xl p-5 border border-white/15 shadow-2xl space-y-3 text-right bg-[#0a0a0c]">
+            <div className="flex items-center justify-between pb-2 border-b border-white/10">
               <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
-                <Calculator className="h-4 w-4 text-amber-400" />
+                <Calculator className="h-4 w-4 text-white" />
                 <span>حاسبة الاحتياج العلمي الدقيق</span>
               </h3>
               <button onClick={() => setShowCalorieCalc(false)} className="text-zinc-400 hover:text-white">
@@ -761,17 +867,17 @@ export const MobileFocusHub: React.FC = () => {
                   <span className="text-zinc-400">سعرات الثبات مع النشاط:</span>
                   <span className="font-mono text-white font-bold">{calorieData.maintenance} سعرة</span>
                 </div>
-                <div className="flex justify-between pt-1 border-t border-white/5 text-emerald-400 font-bold">
+                <div className="flex justify-between pt-1 border-t border-white/5 text-white font-bold">
                   <span>الهدف لزيادة الوزن (+700 سعرة):</span>
-                  <span className="font-mono text-amber-400 font-bold">{calorieData.targetSurplusCalories} سعرة</span>
+                  <span className="font-mono text-white font-bold">{calorieData.targetSurplusCalories} سعرة</span>
                 </div>
-                <div className="flex justify-between text-blue-300">
+                <div className="flex justify-between text-zinc-300">
                   <span>البروتين اليومي المطلوب:</span>
                   <span className="font-mono font-bold">{calorieData.dailyProteinGrams} غرام</span>
                 </div>
               </div>
 
-              <p className="text-[11px] text-zinc-300 leading-relaxed bg-black/30 p-2.5 rounded-xl border border-white/5">
+              <p className="text-[11px] text-zinc-300 leading-relaxed bg-black/50 p-2.5 rounded-xl border border-white/5">
                 {calorieData.explanationArabic}
               </p>
             </div>
@@ -779,7 +885,7 @@ export const MobileFocusHub: React.FC = () => {
             <div className="flex gap-2 pt-2">
               <button
                 onClick={() => handleApplyCaloriePlan(3000)}
-                className="flex-1 py-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-xs active:scale-95 transition-all text-center"
+                className="flex-1 py-2.5 rounded-2xl bg-white hover:bg-zinc-200 text-black font-bold text-xs active:scale-95 transition-all text-center shadow-lg"
               >
                 تطبيق هدف 3000 سعرة
               </button>
@@ -790,9 +896,9 @@ export const MobileFocusHub: React.FC = () => {
 
       {/* MODAL 2: Add Custom Meal */}
       {showAddMealModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xl p-4">
-          <form onSubmit={handleAddCustomMeal} className="apple-glass-elevated w-full max-w-sm rounded-3xl p-5 border border-white/10 shadow-2xl space-y-3 text-right">
-            <div className="flex items-center justify-between pb-2 border-b border-white/5">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-xl p-4">
+          <form onSubmit={handleAddCustomMeal} className="apple-glass w-full max-w-sm rounded-3xl p-5 border border-white/15 shadow-2xl space-y-3 text-right bg-[#0a0a0c]">
+            <div className="flex items-center justify-between pb-2 border-b border-white/10">
               <h3 className="text-sm font-bold text-white">إضافة وجبة طاقة مخصصة</h3>
               <button type="button" onClick={() => setShowAddMealModal(false)} className="text-zinc-400 hover:text-white">
                 <X className="h-4 w-4" />
@@ -807,7 +913,7 @@ export const MobileFocusHub: React.FC = () => {
                 value={customMealTitle}
                 onChange={(e) => setCustomMealTitle(e.target.value)}
                 placeholder="مثال: طبق شوفان بالعسل والمكسرات"
-                className="w-full rounded-xl bg-white/[0.04] border border-white/10 px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                className="w-full rounded-xl bg-white/[0.04] border border-white/10 px-3 py-2 text-xs text-white focus:outline-none focus:border-white"
               />
             </div>
 
@@ -818,7 +924,7 @@ export const MobileFocusHub: React.FC = () => {
                 required
                 value={customMealCalories}
                 onChange={(e) => setCustomMealCalories(e.target.value)}
-                className="w-full rounded-xl bg-white/[0.04] border border-white/10 px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-emerald-500"
+                className="w-full rounded-xl bg-white/[0.04] border border-white/10 px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-white"
               />
             </div>
 
@@ -829,7 +935,7 @@ export const MobileFocusHub: React.FC = () => {
                 value={customMealIngredients}
                 onChange={(e) => setCustomMealIngredients(e.target.value)}
                 placeholder="حليب، تمر، طحينة، خبز..."
-                className="w-full rounded-xl bg-white/[0.04] border border-white/10 px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                className="w-full rounded-xl bg-white/[0.04] border border-white/10 px-3 py-2 text-xs text-white focus:outline-none focus:border-white"
               />
             </div>
 
@@ -843,7 +949,7 @@ export const MobileFocusHub: React.FC = () => {
               </button>
               <button
                 type="submit"
-                className="px-5 py-2 rounded-xl bg-emerald-500 text-zinc-950 font-bold text-xs"
+                className="px-5 py-2 rounded-xl bg-white text-black font-bold text-xs"
               >
                 إضافة الوجبة
               </button>
@@ -854,9 +960,9 @@ export const MobileFocusHub: React.FC = () => {
 
       {/* MODAL 3: Add Classroom Task */}
       {showAddTaskModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xl p-4">
-          <form onSubmit={handleAddClassroomTask} className="apple-glass-elevated w-full max-w-sm rounded-3xl p-5 border border-white/10 shadow-2xl space-y-3 text-right">
-            <div className="flex items-center justify-between pb-2 border-b border-white/5">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-xl p-4">
+          <form onSubmit={handleAddClassroomTask} className="apple-glass w-full max-w-sm rounded-3xl p-5 border border-white/15 shadow-2xl space-y-3 text-right bg-[#0a0a0c]">
+            <div className="flex items-center justify-between pb-2 border-b border-white/10">
               <h3 className="text-sm font-bold text-white">إضافة تكليف كلاس روم</h3>
               <button type="button" onClick={() => setShowAddTaskModal(false)} className="text-zinc-400 hover:text-white">
                 <X className="h-4 w-4" />
@@ -869,7 +975,7 @@ export const MobileFocusHub: React.FC = () => {
                 type="text"
                 value={customTaskSubject}
                 onChange={(e) => setCustomTaskSubject(e.target.value)}
-                className="w-full rounded-xl bg-white/[0.04] border border-white/10 px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                className="w-full rounded-xl bg-white/[0.04] border border-white/10 px-3 py-2 text-xs text-white focus:outline-none focus:border-white"
               />
             </div>
 
@@ -881,7 +987,7 @@ export const MobileFocusHub: React.FC = () => {
                 value={customTaskTitle}
                 onChange={(e) => setCustomTaskTitle(e.target.value)}
                 placeholder="تسليم دراسة حالة / حل كويز..."
-                className="w-full rounded-xl bg-white/[0.04] border border-white/10 px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                className="w-full rounded-xl bg-white/[0.04] border border-white/10 px-3 py-2 text-xs text-white focus:outline-none focus:border-white"
               />
             </div>
 
@@ -895,7 +1001,7 @@ export const MobileFocusHub: React.FC = () => {
               </button>
               <button
                 type="submit"
-                className="px-5 py-2 rounded-xl bg-emerald-500 text-zinc-950 font-bold text-xs"
+                className="px-5 py-2 rounded-xl bg-white text-black font-bold text-xs"
               >
                 إضافة المهمة
               </button>
@@ -906,11 +1012,11 @@ export const MobileFocusHub: React.FC = () => {
 
       {/* MODAL 4: Rapid OTA / Live Update Checker */}
       {showUpdateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xl p-4">
-          <div className="apple-glass-elevated w-full max-w-sm rounded-3xl p-5 border border-white/10 shadow-2xl space-y-3 text-right">
-            <div className="flex items-center justify-between pb-2 border-b border-white/5">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-xl p-4">
+          <div className="apple-glass w-full max-w-sm rounded-3xl p-5 border border-white/15 shadow-2xl space-y-3 text-right bg-[#0a0a0c]">
+            <div className="flex items-center justify-between pb-2 border-b border-white/10">
               <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
-                <Zap className="h-4 w-4 text-cyan-400" />
+                <Zap className="h-4 w-4 text-white" />
                 <span>مركز التحديث الفوري (Moha Agent OTA)</span>
               </h3>
               <button onClick={() => setShowUpdateModal(false)} className="text-zinc-400 hover:text-white">
@@ -922,7 +1028,7 @@ export const MobileFocusHub: React.FC = () => {
               <div className="p-3 rounded-2xl bg-white/[0.03] border border-white/5 space-y-1">
                 <div className="flex justify-between">
                   <span className="text-zinc-400">الإصدار الحالي:</span>
-                  <span className="font-mono text-emerald-400 font-bold">{SystemUpdaterEngine.CURRENT_VERSION}</span>
+                  <span className="font-mono text-white font-bold">{SystemUpdaterEngine.CURRENT_VERSION}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-zinc-400">حالة الربط:</span>
@@ -931,7 +1037,7 @@ export const MobileFocusHub: React.FC = () => {
               </div>
 
               {updateStatus && (
-                <p className="text-[11px] p-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-200">
+                <p className="text-[11px] p-2.5 rounded-xl bg-white/[0.05] border border-white/10 text-zinc-200">
                   {updateStatus}
                 </p>
               )}
@@ -950,7 +1056,7 @@ export const MobileFocusHub: React.FC = () => {
               </button>
               <button
                 onClick={handleApplyUpdateReload}
-                className="flex-1 py-2 rounded-xl bg-cyan-500 text-zinc-950 text-xs font-bold shadow-md"
+                className="flex-1 py-2 rounded-xl bg-white text-black text-xs font-bold shadow-md hover:bg-zinc-200"
               >
                 تطبيق التحديث فوراً ⚡
               </button>

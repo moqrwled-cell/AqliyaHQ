@@ -21,8 +21,8 @@ interface HeaderHUDProps {
   onOpenBriefing: () => void;
   onOpenWatchdog: () => void;
   watchdogCount: number;
-  activeMainView: 'focus' | 'deck' | 'workspace' | 'vault_browser' | 'accounts' | 'swarm' | 'memory' | 'project_life' | 'opportunity_radar';
-  onSelectMainView: (view: 'focus' | 'deck' | 'workspace' | 'vault_browser' | 'accounts' | 'swarm' | 'memory' | 'project_life' | 'opportunity_radar') => void;
+  activeMainView: 'focus' | 'discipline' | 'deck' | 'workspace' | 'vault_browser' | 'accounts' | 'swarm' | 'memory' | 'project_life' | 'opportunity_radar';
+  onSelectMainView: (view: 'focus' | 'discipline' | 'deck' | 'workspace' | 'vault_browser' | 'accounts' | 'swarm' | 'memory' | 'project_life' | 'opportunity_radar') => void;
   onExportMarkdown: () => void;
   onOpenSettings: () => void;
   isOnline: boolean;
@@ -53,14 +53,14 @@ export const HeaderHUD: React.FC<HeaderHUDProps> = ({
   }, []);
 
   return (
-    <header className="sticky top-0 z-40 apple-glass border-b border-white/5 px-4 py-2.5 backdrop-blur-2xl flex-shrink-0">
+    <header className="hidden lg:block sticky top-0 z-40 apple-glass border-b border-white/10 px-4 py-2.5 backdrop-blur-2xl flex-shrink-0">
       <div className="flex flex-wrap items-center justify-between gap-3 max-w-[1700px] mx-auto">
         
         {/* Brand & Identity */}
         <div className="flex items-center gap-3">
           <button
             onClick={() => onSelectMainView('deck')}
-            className="relative flex h-10 w-10 items-center justify-center rounded-2xl overflow-hidden border border-emerald-400/40 shadow-[0_0_20px_rgba(16,185,129,0.35)] active:scale-95 transition-all bg-zinc-900"
+            className="relative flex h-10 w-10 items-center justify-center rounded-2xl overflow-hidden border border-white/20 shadow-[0_0_20px_rgba(255,255,255,0.15)] active:scale-95 transition-all bg-zinc-900"
             title="Moha Agent"
           >
             <img src="/logo.png" alt="Moha Agent" className="w-full h-full object-cover" />
@@ -75,34 +75,45 @@ export const HeaderHUD: React.FC<HeaderHUDProps> = ({
             </div>
             <div className="flex items-center gap-2 text-[11px] text-zinc-400">
               <span className="flex items-center gap-1.5">
-                <Circle className={`h-1.5 w-1.5 fill-current ${isOnline ? 'text-emerald-400' : 'text-amber-400'}`} />
+                <Circle className={`h-1.5 w-1.5 fill-current ${isOnline ? 'text-white' : 'text-zinc-500'}`} />
                 <span>{isOnline ? 'مزامنة سحابية متصلة' : 'الوضع المحلي أوفلاين'}</span>
               </span>
               <span className="text-zinc-600">•</span>
-              <span className="text-emerald-400 font-medium">محمد قرمان</span>
+              <span className="text-white font-medium">محمد قرمان</span>
             </div>
           </div>
         </div>
 
         {/* Navigation & Section Switches */}
-        <div className="hidden md:flex items-center gap-1 bg-white/[0.03] p-1 rounded-2xl border border-white/5">
+        <div className="hidden md:flex items-center gap-1 bg-white/[0.03] p-1 rounded-2xl border border-white/10">
           <button
             onClick={() => onSelectMainView('focus')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
               activeMainView === 'focus'
-                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold'
+                ? 'bg-white text-black font-bold shadow-md'
                 : 'text-zinc-400 hover:text-white'
             }`}
           >
-            <Sparkles className="h-3.5 w-3.5 text-emerald-400" />
+            <Sparkles className="h-3.5 w-3.5" />
             <span>خطة اليوم 🎯</span>
+          </button>
+
+          <button
+            onClick={() => onSelectMainView('discipline')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+              activeMainView === 'discipline'
+                ? 'bg-white text-black font-bold shadow-md'
+                : 'text-zinc-400 hover:text-white'
+            }`}
+          >
+            <span>لوحة التطور 📈</span>
           </button>
 
           <button
             onClick={() => onSelectMainView('deck')}
             className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
               activeMainView === 'deck'
-                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold'
+                ? 'bg-white text-black font-bold shadow-md'
                 : 'text-zinc-400 hover:text-white'
             }`}
           >
@@ -113,7 +124,7 @@ export const HeaderHUD: React.FC<HeaderHUDProps> = ({
             onClick={() => onSelectMainView('workspace')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
               activeMainView === 'workspace'
-                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold'
+                ? 'bg-white text-black font-bold shadow-md'
                 : 'text-zinc-400 hover:text-white'
             }`}
           >
@@ -124,11 +135,11 @@ export const HeaderHUD: React.FC<HeaderHUDProps> = ({
             onClick={() => onSelectMainView('project_life')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
               activeMainView === 'project_life'
-                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold'
+                ? 'bg-white text-black font-bold shadow-md'
                 : 'text-zinc-400 hover:text-white'
             }`}
           >
-            <FolderKanban className="h-3.5 w-3.5 text-emerald-400" />
+            <FolderKanban className="h-3.5 w-3.5" />
             <span>المشاريع والحياة (19)</span>
           </button>
 
@@ -136,11 +147,11 @@ export const HeaderHUD: React.FC<HeaderHUDProps> = ({
             onClick={() => onSelectMainView('opportunity_radar')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
               activeMainView === 'opportunity_radar'
-                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold'
+                ? 'bg-white text-black font-bold shadow-md'
                 : 'text-zinc-400 hover:text-white'
             }`}
           >
-            <Compass className="h-3.5 w-3.5 text-emerald-400" />
+            <Compass className="h-3.5 w-3.5" />
             <span>رادار الفرص والأفكار</span>
           </button>
 

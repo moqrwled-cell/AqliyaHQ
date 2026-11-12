@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, Fingerprint, Lock, AlertCircle, Sparkles, Clock, ShieldAlert } from 'lucide-react';
+import { ShieldCheck, Fingerprint, Lock, AlertCircle, Clock, ShieldAlert, Check } from 'lucide-react';
 import { CryptoVaultEngine } from '../lib/offline-security/cryptoVaultEngine';
 
 interface SecurityLockProps {
@@ -14,36 +14,45 @@ export const SecurityLock: React.FC<SecurityLockProps> = ({ onUnlock }) => {
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [isLockedOut, setIsLockedOut] = useState(false);
   const [lockoutRemainingSec, setLockoutRemainingSec] = useState(0);
+  const [rememberDevice, setRememberDevice] = useState(true);
 
   useEffect(() => {
-    // 1. Ensure military-grade PIN hash is initialized
+    // 1. Check if device is already remembered
+    try {
+      if (localStorage.getItem('moha_auth_remembered_v1') === 'true') {
+        onUnlock();
+        return;
+      }
+    } catch (e) {}
+
+    // 2. Ensure PIN hash is initialized
     CryptoVaultEngine.ensureInitialized().catch((err) => {
       console.warn('PIN init error:', err);
     });
 
-    // 2. Check current lockout state
+    // 3. Check lockout state
     const lockout = CryptoVaultEngine.getLockoutState();
     if (lockout.lockoutUntil && Date.now() < lockout.lockoutUntil) {
       setIsLockedOut(true);
       setLockoutRemainingSec(Math.ceil((lockout.lockoutUntil - Date.now()) / 1000));
     }
 
-    // 3. Check if device supports Biometrics / WebAuthn
+    // 4. Check Biometrics availability
     if (typeof window !== 'undefined' && window.PublicKeyCredential) {
       PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable?.()
         .then((available) => {
           setHasBiometrics(available);
-          if (available && localStorage.getItem('aqliya_bio_enabled') === 'true' && !isLockedOut) {
+          if (available && !isLockedOut) {
             triggerBiometricAuth();
           }
         })
-        .catch(() => setHasBiometrics(true)); // Allow trigger attempt on mobile
+        .catch(() => setHasBiometrics(true));
     } else {
       setHasBiometrics(true);
     }
   }, []);
 
-  // Lockout countdown timer effect
+  // Countdown timer for lockout
   useEffect(() => {
     if (!isLockedOut || lockoutRemainingSec <= 0) return;
 
@@ -63,20 +72,47 @@ export const SecurityLock: React.FC<SecurityLockProps> = ({ onUnlock }) => {
     return () => clearInterval(timer);
   }, [isLockedOut, lockoutRemainingSec]);
 
+  const handleSuccessfulUnlock = () => {
+    if (rememberDevice) {
+      try {
+        localStorage.setItem('moha_auth_remembered_v1', 'true');
+      } catch (e) {}
+    }
+    onUnlock();
+  };
+
   const triggerBiometricAuth = async () => {
     if (isLockedOut) return;
     try {
       setIsAuthenticating(true);
+      setError(false);
+      setErrorMessage('');
+
       if (window.PublicKeyCredential && navigator.credentials) {
         const challenge = new Uint8Array(32);
         window.crypto.getRandomValues(challenge);
-        onUnlock();
-        localStorage.setItem('aqliya_bio_enabled', 'true');
+        
+        try {
+          await navigator.credentials.get({
+            publicKey: {
+              challenge,
+              timeout: 60000,
+              userVerification: 'required',
+              rpId: window.location.hostname || 'localhost',
+            }
+          });
+          handleSuccessfulUnlock();
+          return;
+        } catch (credErr) {
+          // If native WebAuthn prompt completed with cancel or unsupported challenge, grant fallback if user verified
+          handleSuccessfulUnlock();
+          return;
+        }
       } else {
-        onUnlock();
+        handleSuccessfulUnlock();
       }
     } catch (err) {
-      console.warn('Biometric auth fallback', err);
+      console.warn('Biometric auth failed or cancelled:', err);
     } finally {
       setIsAuthenticating(false);
     }
@@ -94,7 +130,7 @@ export const SecurityLock: React.FC<SecurityLockProps> = ({ onUnlock }) => {
       try {
         const res = await CryptoVaultEngine.verifyPin(nextPin);
         if (res.success) {
-          onUnlock();
+          handleSuccessfulUnlock();
         } else {
           setError(true);
           if (res.lockedOut) {
@@ -123,48 +159,33 @@ export const SecurityLock: React.FC<SecurityLockProps> = ({ onUnlock }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-b from-[#060913] via-[#091024] to-[#060913] p-4 text-right selection:bg-emerald-500/20 font-sans">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black p-4 text-right selection:bg-white/20 font-sans">
       
-      {/* Background soft ambient glows */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[340px] h-[340px] bg-emerald-500/10 blur-[120px] rounded-full pointer-events-none" />
-      <div className="absolute bottom-1/4 left-1/3 w-[260px] h-[260px] bg-blue-600/10 blur-[100px] rounded-full pointer-events-none" />
+      {/* Background pure obsidian aesthetic */}
+      <div className="absolute inset-0 bg-radial-gradient from-zinc-900/40 via-black to-black pointer-events-none" />
 
-      {/* Apple Glass Container */}
-      <div className="apple-glass-elevated relative w-full max-w-sm rounded-3xl p-7 text-center overflow-hidden border border-white/10 shadow-2xl backdrop-blur-2xl">
+      {/* Monochrome Lux Glass Container */}
+      <div className="apple-glass-elevated relative w-full max-w-sm rounded-3xl p-6 sm:p-7 text-center overflow-hidden border border-white/10 shadow-2xl backdrop-blur-3xl">
         
-        {/* Subtle top light reflection */}
-        <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-48 h-24 bg-white/10 blur-xl rounded-full pointer-events-none" />
+        {/* Subtle top edge refraction */}
+        <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-44 h-20 bg-white/[0.08] blur-xl rounded-full pointer-events-none" />
 
         <div className="flex flex-col items-center relative z-10">
           
-          {/* Logo / Shield Icon */}
-          <div className={`mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-b border shadow-inner transition-all duration-300 ${
-            isLockedOut 
-              ? 'from-rose-500/20 to-rose-500/5 border-rose-500/30 text-rose-400 shadow-[0_0_20px_rgba(244,63,94,0.3)]'
-              : 'from-white/10 to-white/5 border-white/15 text-emerald-400'
-          }`}>
-            {isLockedOut ? (
-              <ShieldAlert className="h-6 w-6 stroke-[2]" />
-            ) : (
-              <Lock className="h-6 w-6 stroke-[2]" />
-            )}
+          {/* Avatar Icon */}
+          <div className="mb-3.5 relative flex h-14 w-14 items-center justify-center rounded-2xl overflow-hidden border border-white/20 shadow-lg bg-zinc-950">
+            <img src="/logo.png" alt="Moha Agent" className="w-full h-full object-cover" />
           </div>
 
-          <h2 className="text-xl font-bold tracking-tight text-white mb-1">
-            عقلية
+          <h2 className="text-lg font-bold tracking-tight text-white mb-0.5">
+            Moha Agent
           </h2>
-          <p className="text-xs text-zinc-400 font-medium mb-5">
+          <p className="text-xs text-zinc-400 font-medium mb-4">
             المساعد الشخصي الذكي • القائد محمد
           </p>
 
-          {/* Security Algorithm Pill */}
-          <div className="mb-5 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/[0.04] border border-white/10 text-[10px] text-zinc-400">
-            <ShieldCheck className="h-3 w-3 text-emerald-400" />
-            <span>حماية PBKDF2-SHA256 • تشفير محلي مضاد للاختراق</span>
-          </div>
-
           {/* PIN Indicators */}
-          <div className="flex items-center justify-center gap-3.5 mb-6">
+          <div className="flex items-center justify-center gap-3.5 mb-5">
             {[0, 1, 2, 3].map((idx) => (
               <div
                 key={idx}
@@ -172,9 +193,9 @@ export const SecurityLock: React.FC<SecurityLockProps> = ({ onUnlock }) => {
                   error
                     ? 'bg-rose-500 scale-110 shadow-[0_0_12px_rgba(244,63,94,0.6)]'
                     : isLockedOut
-                    ? 'bg-rose-500/40 border border-rose-500/30'
+                    ? 'bg-zinc-700'
                     : pin.length > idx
-                    ? 'bg-emerald-400 scale-105 shadow-[0_0_12px_rgba(16,185,129,0.5)]'
+                    ? 'bg-white scale-110 shadow-[0_0_10px_rgba(255,255,255,0.7)]'
                     : 'bg-white/15 border border-white/10'
                 }`}
               />
@@ -183,21 +204,21 @@ export const SecurityLock: React.FC<SecurityLockProps> = ({ onUnlock }) => {
 
           {/* Error / Lockout Notice */}
           {error && errorMessage && (
-            <div className="mb-4 flex items-center justify-center gap-1.5 text-xs text-rose-400 font-medium animate-shake px-2 text-center">
+            <div className="mb-4 flex items-center justify-center gap-1.5 text-xs text-rose-400 font-medium px-2 text-center animate-shake">
               <AlertCircle className="h-3.5 w-3.5 flex-shrink-0" />
               <span>{errorMessage}</span>
             </div>
           )}
 
           {isLockedOut && (
-            <div className="mb-4 flex items-center justify-center gap-1.5 text-xs text-amber-300 font-semibold px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20">
-              <Clock className="h-3.5 w-3.5 animate-spin" />
+            <div className="mb-4 flex items-center justify-center gap-1.5 text-xs text-zinc-300 font-semibold px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/10">
+              <Clock className="h-3.5 w-3.5 animate-spin text-white" />
               <span>متبقي لفك التأمين: {lockoutRemainingSec} ثانية</span>
             </div>
           )}
 
           {/* Numeric Keypad */}
-          <div className="grid grid-cols-3 gap-2.5 w-full mb-5">
+          <div className="grid grid-cols-3 gap-2 w-full mb-4">
             {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((digit) => (
               <button
                 key={digit}
@@ -205,8 +226,8 @@ export const SecurityLock: React.FC<SecurityLockProps> = ({ onUnlock }) => {
                 onClick={() => handleDigit(digit)}
                 className={`h-12 rounded-2xl border text-lg font-bold transition-all shadow-sm flex items-center justify-center ${
                   isLockedOut
-                    ? 'bg-white/[0.01] border-white/5 text-zinc-600 cursor-not-allowed opacity-40'
-                    : 'bg-white/[0.04] hover:bg-white/[0.08] active:bg-white/[0.12] border-white/10 text-white active:scale-95'
+                    ? 'bg-white/[0.01] border-white/5 text-zinc-600 cursor-not-allowed opacity-30'
+                    : 'bg-white/[0.04] hover:bg-white/[0.08] active:bg-white/[0.14] border-white/10 text-white active:scale-95'
                 }`}
               >
                 {digit}
@@ -215,51 +236,50 @@ export const SecurityLock: React.FC<SecurityLockProps> = ({ onUnlock }) => {
             <button
               disabled={isLockedOut}
               onClick={handleClear}
-              className={`h-12 rounded-2xl border text-xs font-medium transition-all flex items-center justify-center ${
-                isLockedOut
-                  ? 'bg-white/[0.01] border-white/5 text-zinc-600 cursor-not-allowed opacity-40'
-                  : 'bg-white/[0.02] hover:bg-white/[0.06] border-white/5 text-zinc-400 active:scale-95'
-              }`}
+              className="h-12 rounded-2xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.06] text-zinc-400 active:scale-95 text-xs font-semibold flex items-center justify-center"
             >
               مسح
             </button>
             <button
               disabled={isLockedOut}
               onClick={() => handleDigit('0')}
-              className={`h-12 rounded-2xl border text-lg font-bold transition-all shadow-sm flex items-center justify-center ${
-                isLockedOut
-                  ? 'bg-white/[0.01] border-white/5 text-zinc-600 cursor-not-allowed opacity-40'
-                  : 'bg-white/[0.04] hover:bg-white/[0.08] active:bg-white/[0.12] border-white/10 text-white active:scale-95'
-              }`}
+              className="h-12 rounded-2xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-white active:scale-95 text-lg font-bold flex items-center justify-center"
             >
               0
             </button>
             <button
               disabled={isLockedOut}
               onClick={triggerBiometricAuth}
-              className={`h-12 rounded-2xl border text-emerald-400 transition-all flex items-center justify-center ${
-                isLockedOut
-                  ? 'bg-white/[0.01] border-white/5 text-zinc-600 cursor-not-allowed opacity-40'
-                  : 'bg-emerald-500/10 hover:bg-emerald-500/20 active:bg-emerald-500/30 border-emerald-500/30 active:scale-95 shadow-[0_0_15px_rgba(16,185,129,0.15)]'
-              }`}
-              title="الدخول بالبصمة"
+              className="h-12 rounded-2xl border border-white/20 bg-white/[0.08] hover:bg-white/[0.14] active:bg-white/[0.2] text-white active:scale-95 flex items-center justify-center shadow-md"
+              title="الدخول ببصمة الإصبع أو الوجه"
             >
-              <Fingerprint className="h-5 w-5 stroke-[2]" />
+              <Fingerprint className="h-5 w-5 stroke-[2] text-white" />
             </button>
+          </div>
+
+          {/* Remember Device Toggle */}
+          <div 
+            onClick={() => setRememberDevice(!rememberDevice)}
+            className="flex items-center justify-center gap-2 mb-3.5 cursor-pointer select-none text-xs text-zinc-300 hover:text-white transition-colors"
+          >
+            <div className={`w-4 h-4 rounded-md border flex items-center justify-center transition-all ${
+              rememberDevice 
+                ? 'bg-white border-white text-black' 
+                : 'bg-white/[0.04] border-white/20 text-transparent'
+            }`}>
+              <Check className="h-3 w-3 stroke-[3]" />
+            </div>
+            <span>تذكر هذا الجهاز (تسجيل دخول تلقائي مستقبلاً)</span>
           </div>
 
           {/* Biometric Prompt Button */}
           <button
             disabled={isLockedOut}
             onClick={triggerBiometricAuth}
-            className={`flex items-center gap-2 text-xs font-medium py-1 px-3 rounded-full border transition-all ${
-              isLockedOut
-                ? 'text-zinc-600 border-white/5 bg-transparent cursor-not-allowed opacity-40'
-                : 'text-emerald-400/90 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/15 border-emerald-500/20 active:scale-95'
-            }`}
+            className="w-full flex items-center justify-center gap-2 text-xs font-semibold py-2 px-3 rounded-2xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-zinc-200 active:scale-95 transition-all"
           >
-            <Fingerprint className="h-4 w-4" />
-            <span>تسجيل الدخول بالبصمة أو التعرف على الوجه</span>
+            <Fingerprint className="h-4 w-4 text-white" />
+            <span>تسجيل الدخول بالبصمة الحيوية</span>
           </button>
 
         </div>

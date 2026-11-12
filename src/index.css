@@ -1,7 +1,8 @@
 @import "tailwindcss";
+@import "glisse/styles.css";
 
 /* ==========================================================================
-   AQEEQ SANS PRO TYPOGRAPHY
+   AQEEQ SANS PRO & MODERN TYPOGRAPHY
    ========================================================================== */
 @font-face {
   font-family: 'Aqeeq';
@@ -29,22 +30,21 @@
 
 @layer base {
   :root {
-    --bg-navy-void: #060913;
-    --bg-navy-base: #080d1a;
-    --bg-navy-glass: rgba(12, 20, 38, 0.75);
-    --bg-navy-card: rgba(16, 26, 48, 0.65);
+    --bg-oled-black: #000000;
+    --bg-graphite-dark: #070709;
+    --bg-graphite-card: rgba(18, 18, 22, 0.75);
     
-    --border-glass: rgba(255, 255, 255, 0.08);
-    --border-glass-highlight: rgba(255, 255, 255, 0.16);
-    --border-emerald: rgba(16, 185, 129, 0.35);
+    --border-glass-subtle: rgba(255, 255, 255, 0.08);
+    --border-glass-highlight: rgba(255, 255, 255, 0.18);
+    --border-platinum: rgba(228, 228, 231, 0.25);
     
-    --text-primary: #f8fafc;
-    --text-secondary: #94a3b8;
-    --text-muted: #64748b;
+    --text-pure-white: #ffffff;
+    --text-platinum: #e4e4e7;
+    --text-silver-muted: #a1a1aa;
+    --text-graphite-faint: #71717a;
     
-    --accent-emerald: #10b981;
-    --accent-emerald-light: #34d399;
-    --accent-emerald-dark: #047857;
+    --accent-pure-white: #ffffff;
+    --accent-silver: #d4d4d8;
   }
 
   * {
@@ -61,8 +61,8 @@
     margin: 0;
     padding: 0;
     overflow: hidden;
-    background: radial-gradient(circle at 50% 0%, #0d172e 0%, #060913 70%);
-    color: var(--text-primary);
+    background: #000000;
+    color: var(--text-pure-white);
     direction: rtl;
     user-select: none;
     -webkit-font-smoothing: antialiased;
@@ -75,58 +75,58 @@
 }
 
 /* ==========================================================================
-   APPLE LIQUID GLASS & LUXURY NAVY UTILITIES
+   MONOCHROME LUXURY LIQUID GLASS UTILITIES (APPLE & GLISSE INTEGRATION)
    ========================================================================== */
 .apple-glass {
-  background: rgba(10, 17, 34, 0.72);
-  backdrop-filter: blur(28px) saturate(190%);
-  -webkit-backdrop-filter: blur(28px) saturate(190%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-top: 1px solid rgba(255, 255, 255, 0.16);
-  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  background: rgba(12, 12, 16, 0.72);
+  backdrop-filter: blur(32px) saturate(180%);
+  -webkit-backdrop-filter: blur(32px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-top: 1px solid rgba(255, 255, 255, 0.20);
+  box-shadow: 0 12px 36px -10px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
 .apple-glass-card {
-  background: rgba(13, 22, 42, 0.55);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-top: 1px solid rgba(255, 255, 255, 0.14);
-  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.35);
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  background: rgba(16, 16, 20, 0.65);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 4px 24px -2px rgba(0, 0, 0, 0.5);
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .apple-glass-card:hover {
-  background: rgba(16, 28, 54, 0.7);
-  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(22, 22, 28, 0.82);
+  border-color: rgba(255, 255, 255, 0.18);
   transform: translateY(-1px);
 }
 
 .apple-glass-elevated {
-  background: rgba(14, 24, 46, 0.88);
-  backdrop-filter: blur(36px);
-  -webkit-backdrop-filter: blur(36px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-top: 1px solid rgba(255, 255, 255, 0.22);
-  box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  background: rgba(10, 10, 14, 0.92);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-top: 1px solid rgba(255, 255, 255, 0.28);
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 
 .craft-border {
   border-color: rgba(255, 255, 255, 0.08);
 }
 
-/* Emerald highlights */
-.emerald-glow {
-  box-shadow: 0 0 25px rgba(16, 185, 129, 0.25);
+/* Monochrome Subtle Glow */
+.monochrome-glow {
+  box-shadow: 0 0 25px rgba(255, 255, 255, 0.12);
 }
 
-.emerald-badge {
-  background: rgba(16, 185, 129, 0.12);
-  border: 1px solid rgba(16, 185, 129, 0.25);
-  color: #34d399;
+.monochrome-badge {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #f4f4f5;
 }
 
-/* Refined Minimalist Scrollbar */
+/* Refined Minimalist Monochrome Scrollbar */
 ::-webkit-scrollbar {
   width: 5px;
   height: 5px;
@@ -135,9 +135,9 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.15);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(16, 185, 129, 0.4);
+  background: rgba(255, 255, 255, 0.35);
 }
