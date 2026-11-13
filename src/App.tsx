@@ -27,6 +27,7 @@ import { SITREPBriefingModal } from './components/SITREPBriefingModal';
 import { WatchdogDrawer } from './components/WatchdogDrawer';
 import { HandsFreeVoiceCall } from './components/HandsFreeVoiceCall';
 import { SettingsModal } from './components/SettingsModal';
+import { MobileNav } from './components/MobileNav';
 import { MobileFocusHub } from './components/mobile/MobileFocusHub';
 import { MobileSideDrawer } from './components/mobile/MobileSideDrawer';
 import { DisciplineDashboard } from './components/dashboard/DisciplineDashboard';
@@ -881,6 +882,13 @@ export function App() {
       <ClassroomBridgeModal
         isOpen={isClassroomModalOpen}
         onClose={() => setIsClassroomModalOpen(false)}
+      />
+
+      {/* Luxury Bottom Navigation Bar */}
+      <MobileNav
+        activeTab={mobileTab}
+        onSelectTab={setMobileTab}
+        onOpenSideDrawer={() => setIsSideDrawerOpen(true)}
       />
 
       {/* Global Alarm Overlay (رنين المنبه في أي مكان بالتطبيق) */}

@@ -25,12 +25,16 @@ import {
   Zap,
   AlarmClock,
   Menu,
-  ChevronLeft
+  ChevronLeft,
+  Moon,
+  Sun
 } from 'lucide-react';
 import { PersonalFocusEngine } from '../../lib/personal-focus/personalFocusEngine';
 import type { DailyPersonalPlan } from '../../lib/personal-focus/types';
 import { NotificationManager } from '../../lib/notifications/notificationManager';
 import { SystemUpdaterEngine } from '../../lib/updater/systemUpdaterEngine';
+import { SleepTrackerEngine } from '../../lib/sleepTrackerEngine';
+import { SleepLoggerModal } from './SleepLoggerModal';
 import { AlarmManagerModal } from './AlarmManagerModal';
 import { ClassroomBridgeModal } from './ClassroomBridgeModal';
 import { AlarmRingingOverlay } from './AlarmRingingOverlay';
@@ -41,7 +45,6 @@ interface MobileFocusHubProps {
 
 // ============================================================================
 // ISOLATED LUXURY DIGITAL CLOCK & DYNAMIC GREETING
-// (Memoized so it ONLY updates the clock numbers without re-rendering the whole page!)
 // ============================================================================
 const LuxuryDigitalClock: React.FC = React.memo(() => {
   const [currentTime, setCurrentTime] = useState(() => new Date());
@@ -116,24 +119,24 @@ const LuxuryDigitalClock: React.FC = React.memo(() => {
   }, [currentTime]);
 
   return (
-    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-1">
+    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 pt-1">
       {/* Clock Display */}
-      <div className="flex flex-col items-start bg-white/[0.04] border border-white/10 p-3 rounded-2xl min-w-[150px] w-full sm:w-auto shadow-sm">
+      <div className="flex flex-col items-start bg-white/[0.04] border border-white/10 p-2.5 rounded-xl min-w-[140px] w-full sm:w-auto shadow-sm">
         <div className="flex items-baseline gap-1 text-white font-mono">
-          <span className="text-3xl font-black tracking-tight">{timeFormatted.hours}:{timeFormatted.minutes}</span>
+          <span className="text-2xl sm:text-3xl font-black tracking-tight">{timeFormatted.hours}:{timeFormatted.minutes}</span>
           <span className="text-xs text-zinc-400 font-mono">:{timeFormatted.seconds}</span>
-          <span className="text-[11px] px-1.5 py-0.5 rounded-md bg-white/10 text-white font-bold ml-1">{timeFormatted.period}</span>
+          <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-white/10 text-white font-bold ml-1">{timeFormatted.period}</span>
         </div>
-        <span className="text-[10px] text-zinc-400 mt-1 font-medium">{dateFormatted}</span>
+        <span className="text-[10px] text-zinc-400 mt-0.5 font-medium">{dateFormatted}</span>
       </div>
 
       {/* Dynamic Motivational Message */}
       <div className="flex-1 text-right w-full sm:w-auto">
-        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/10 border border-white/15 text-[10px] font-bold text-white mb-1">
+        <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-white/10 border border-white/15 text-[10px] font-bold text-white mb-1">
           <Sparkles className="h-3 w-3" />
           <span>{dynamicGreeting.tag}</span>
         </div>
-        <h3 className="text-sm font-bold text-white tracking-tight">{dynamicGreeting.title}</h3>
+        <h3 className="text-xs sm:text-sm font-bold text-white tracking-tight">{dynamicGreeting.title}</h3>
         <p className="text-[11px] text-zinc-300 leading-relaxed mt-0.5">{dynamicGreeting.quote}</p>
       </div>
     </div>
@@ -143,7 +146,7 @@ const LuxuryDigitalClock: React.FC = React.memo(() => {
 LuxuryDigitalClock.displayName = 'LuxuryDigitalClock';
 
 // ============================================================================
-// MAIN FOCUS HUB (Zero-Lag, Hardware-Accelerated Monochrome Lux)
+// MAIN FOCUS HUB (Zero-Lag, Flush Edge-to-Edge Layout)
 // ============================================================================
 export const MobileFocusHub: React.FC<MobileFocusHubProps> = ({ onOpenSideDrawer }) => {
   const [plan, setPlan] = useState<DailyPersonalPlan>(() => PersonalFocusEngine.getTodayPlan());
@@ -152,6 +155,46 @@ export const MobileFocusHub: React.FC<MobileFocusHubProps> = ({ onOpenSideDrawer
   const [backupStatus, setBackupStatus] = useState<string | null>(null);
   const [showAlternativeMeal, setShowAlternativeMeal] = useState<Record<string, boolean>>({});
   const [activeSubTab, setActiveSubTab] = useState<'today' | 'nexus' | 'college' | 'body'>('today');
+
+  // Sleep tracking states
+  const [showSleepModal, setShowSleepModal] = useState(false);
+  const [isSleeping, setIsSleeping] = useState(() => SleepTrackerEngine.getPendingSleep());
+  const [lastSleepDuration, setLastSleepDuration] = useState(() => {
+    const records = SleepTrackerEngine.getAllRecords();
+    if (records.length > 0) {
+      const last = records[records.length - 1];
+      return `${Math.floor(last.durationMinutes / 60)}h ${last.durationMinutes % 60}m`;
+    }
+    return '8h 12m';
+  });
+
+  useEffect(() => {
+    const handleSleepUpdate = (e: any) => {
+      setIsSleeping(SleepTrackerEngine.getPendingSleep());
+      if (e.detail?.durationMinutes) {
+        const h = Math.floor(e.detail.durationMinutes / 60);
+        const m = e.detail.durationMinutes % 60;
+        setLastSleepDuration(`${h}h ${m}m`);
+      }
+    };
+    window.addEventListener('moha:sleep-updated', handleSleepUpdate);
+    return () => window.removeEventListener('moha:sleep-updated', handleSleepUpdate);
+  }, []);
+
+  const handleSleepNow = () => {
+    const res = SleepTrackerEngine.markSleepNow();
+    setIsSleeping({ sleepTime: res.sleepTime, dateStr: new Date().toISOString().split('T')[0] });
+    alert(`تم تسجيل وقت نومك الساعة ${res.sleepTime} 🌙.. تصبح على خير وصحة وبناء عضلي يا محمد!`);
+  };
+
+  const handleWakeNow = () => {
+    const rec = SleepTrackerEngine.markWakeNow();
+    setIsSleeping(null);
+    const h = Math.floor(rec.durationMinutes / 60);
+    const m = rec.durationMinutes % 60;
+    setLastSleepDuration(`${h}h ${m}m`);
+    alert(`صباح الهمّة والنشاط! 🌅 تم توثيق نومك: ${h} ساعة و ${m} دقيقة بنجاح.`);
+  };
 
   // Modals state
   const [showCalorieCalc, setShowCalorieCalc] = useState(false);
@@ -176,7 +219,7 @@ export const MobileFocusHub: React.FC<MobileFocusHubProps> = ({ onOpenSideDrawer
     setPlan(PersonalFocusEngine.getTodayPlan());
     NotificationManager.startBackgroundRoutine();
 
-    // Listen to real-time plan updates from Commander AI or other components
+    // Listen to real-time plan updates
     const handlePlanUpdate = (e: any) => {
       if (e.detail) {
         setPlan({ ...e.detail });
@@ -234,7 +277,6 @@ export const MobileFocusHub: React.FC<MobileFocusHubProps> = ({ onOpenSideDrawer
     setTimeout(() => setBackupStatus(null), 4000);
   };
 
-  // Notification Permission Activator
   const handleRequestNotifications = async () => {
     const res = await NotificationManager.requestPermission();
     setNotifGranted(res.granted);
@@ -245,7 +287,6 @@ export const MobileFocusHub: React.FC<MobileFocusHubProps> = ({ onOpenSideDrawer
     }
   };
 
-  // Add Custom Meal
   const handleAddCustomMeal = (e: React.FormEvent) => {
     e.preventDefault();
     if (!customMealTitle.trim()) return;
@@ -260,7 +301,6 @@ export const MobileFocusHub: React.FC<MobileFocusHubProps> = ({ onOpenSideDrawer
     setShowAddMealModal(false);
   };
 
-  // Add Classroom Task
   const handleAddClassroomTask = (e: React.FormEvent) => {
     e.preventDefault();
     if (!customTaskTitle.trim()) return;
@@ -274,7 +314,6 @@ export const MobileFocusHub: React.FC<MobileFocusHubProps> = ({ onOpenSideDrawer
     setShowAddTaskModal(false);
   };
 
-  // Apply 3000 Calorie Plan
   const handleApplyCaloriePlan = (cals: number) => {
     const updated = PersonalFocusEngine.updateCalories(cals, 70);
     setPlan({ ...updated });
@@ -282,7 +321,6 @@ export const MobileFocusHub: React.FC<MobileFocusHubProps> = ({ onOpenSideDrawer
     alert(`تم تعديل هدف السعرات اليومية في خطتك إلى ${cals} سعرة! 💪`);
   };
 
-  // Check & Apply Live OTA Update
   const handleCheckUpdate = async () => {
     setUpdateStatus('جارٍ فحص التحديثات من المستودع...');
     const res = await SystemUpdaterEngine.checkLatestUpdate();
@@ -308,13 +346,13 @@ export const MobileFocusHub: React.FC<MobileFocusHubProps> = ({ onOpenSideDrawer
   };
 
   return (
-    <div className="flex flex-col h-full bg-black text-right font-sans select-none overflow-y-auto pb-44 px-3 sm:px-4 pt-3 space-y-3.5 overscroll-contain touch-pan-y">
+    <div className="flex flex-col h-full bg-black text-right font-sans select-none overflow-y-auto pb-28 px-2 sm:px-2.5 pt-2 space-y-2.5 overscroll-contain touch-pan-y">
       
       {/* 1. Header: Luxury Digital Clock, Dynamic Greeting & Side Drawer Trigger */}
-      <div className="p-4 sm:p-5 rounded-3xl apple-glass border border-white/10 shadow-2xl space-y-3.5">
+      <div className="p-3.5 sm:p-4 rounded-2xl apple-glass border border-white/10 shadow-lg space-y-3">
         
         {/* Top Control Bar */}
-        <div className="flex items-center justify-between pb-3 border-b border-white/5">
+        <div className="flex items-center justify-between pb-2.5 border-b border-white/5">
           
           {/* Quick Action Icons in Monochrome Lux */}
           <div className="flex items-center gap-1.5">
@@ -362,7 +400,7 @@ export const MobileFocusHub: React.FC<MobileFocusHubProps> = ({ onOpenSideDrawer
           {/* Menu Drawer Button with Written Text */}
           <button
             onClick={triggerDrawer}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-white text-black font-bold text-xs shadow-lg active:scale-95 transition-all hover:bg-zinc-200"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white text-black font-bold text-xs shadow-md active:scale-95 transition-all hover:bg-zinc-200"
             aria-label="فتح القائمة الجانبية"
           >
             <span>القائمة</span>
@@ -374,7 +412,7 @@ export const MobileFocusHub: React.FC<MobileFocusHubProps> = ({ onOpenSideDrawer
         <LuxuryDigitalClock />
 
         {/* Sub-Banner: Shift Badge & Targets */}
-        <div className="flex items-center justify-between pt-2.5 border-t border-white/5 text-[11px]">
+        <div className="flex items-center justify-between pt-2 border-t border-white/5 text-[11px]">
           <div className="inline-flex items-center gap-1.5 text-zinc-400">
             <Clock className="h-3.5 w-3.5 text-white" />
             <span>{plan.shiftBadge}</span>
@@ -387,13 +425,13 @@ export const MobileFocusHub: React.FC<MobileFocusHubProps> = ({ onOpenSideDrawer
         </div>
       </div>
 
-      {/* 2. Top Segmented Pills (Monochrome Lux Glass) */}
-      <div className="flex items-center justify-between gap-1.5 bg-white/[0.03] p-1 rounded-2xl border border-white/5">
+      {/* 2. Top Segmented Pills (Flush Monochrome Glass) */}
+      <div className="flex items-center justify-between gap-1 bg-white/[0.03] p-1 rounded-xl border border-white/5">
         <button
           onClick={() => setActiveSubTab('today')}
-          className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all text-center ${
+          className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all text-center ${
             activeSubTab === 'today'
-              ? 'bg-white text-black shadow-md'
+              ? 'bg-white text-black shadow-sm'
               : 'text-zinc-400 hover:text-white'
           }`}
         >
@@ -402,9 +440,9 @@ export const MobileFocusHub: React.FC<MobileFocusHubProps> = ({ onOpenSideDrawer
 
         <button
           onClick={() => setActiveSubTab('nexus')}
-          className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all text-center ${
+          className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all text-center ${
             activeSubTab === 'nexus'
-              ? 'bg-white text-black shadow-md'
+              ? 'bg-white text-black shadow-sm'
               : 'text-zinc-400 hover:text-white'
           }`}
         >
@@ -413,9 +451,9 @@ export const MobileFocusHub: React.FC<MobileFocusHubProps> = ({ onOpenSideDrawer
 
         <button
           onClick={() => setActiveSubTab('college')}
-          className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all text-center ${
+          className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all text-center ${
             activeSubTab === 'college'
-              ? 'bg-white text-black shadow-md'
+              ? 'bg-white text-black shadow-sm'
               : 'text-zinc-400 hover:text-white'
           }`}
         >
@@ -424,9 +462,9 @@ export const MobileFocusHub: React.FC<MobileFocusHubProps> = ({ onOpenSideDrawer
 
         <button
           onClick={() => setActiveSubTab('body')}
-          className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all text-center ${
+          className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all text-center ${
             activeSubTab === 'body'
-              ? 'bg-white text-black shadow-md'
+              ? 'bg-white text-black shadow-sm'
               : 'text-zinc-400 hover:text-white'
           }`}
         >
@@ -434,12 +472,70 @@ export const MobileFocusHub: React.FC<MobileFocusHubProps> = ({ onOpenSideDrawer
         </button>
       </div>
 
-      {/* 3. SUBTAB: TODAY (MAIN CLEAN BATTLE PLAN) */}
+      {/* 3. SUBTAB: TODAY (MAIN BATTLE PLAN) */}
       {activeSubTab === 'today' && (
-        <div className="space-y-3 animate-in fade-in duration-200">
+        <div className="space-y-2.5 animate-in fade-in duration-200">
           
+          {/* Card S: Sleep & Wake Recovery Tracker (توثيق النوم والاستيقاظ) */}
+          <div className="p-3.5 rounded-2xl apple-glass border border-white/10 space-y-2.5 shadow-md">
+            <div className="flex items-center justify-between pb-1.5 border-b border-white/5">
+              <button
+                onClick={() => setShowSleepModal(true)}
+                className="text-[11px] text-zinc-300 hover:text-white font-bold flex items-center gap-1 hover:underline"
+              >
+                <Clock className="h-3 w-3" />
+                <span>تعديل يدوي</span>
+              </button>
+              <div className="flex items-center gap-1.5 text-xs font-bold text-white">
+                <Moon className="h-4 w-4 text-white" />
+                <span>توثيق النوم والاستيقاظ (الاستشفاء 70kg)</span>
+              </div>
+            </div>
+
+            {/* Quick Action Buttons */}
+            <div className="flex items-center justify-between gap-2 pt-0.5">
+              {isSleeping ? (
+                <div className="flex-1 flex items-center justify-between p-2 rounded-xl bg-white/[0.04] border border-white/10">
+                  <button
+                    onClick={handleWakeNow}
+                    className="px-3.5 py-2 rounded-xl bg-white text-black font-bold text-xs shadow-md active:scale-95 transition-all flex items-center gap-1.5 hover:bg-zinc-200"
+                  >
+                    <Sun className="h-3.5 w-3.5 text-black" />
+                    <span>صحيت الآن 🌅</span>
+                  </button>
+                  <div className="text-right pr-2">
+                    <span className="text-[10px] text-zinc-400 block">وضع النوم نشط</span>
+                    <span className="text-xs font-mono font-bold text-white">منذ {isSleeping.sleepTime}</span>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <button
+                    onClick={handleSleepNow}
+                    className="flex-1 py-2.5 rounded-xl bg-white/[0.06] hover:bg-white/10 border border-white/10 text-xs font-bold text-white active:scale-95 transition-all flex items-center justify-center gap-1.5"
+                  >
+                    <Moon className="h-3.5 w-3.5 text-white" />
+                    <span>نمت الآن 🌙</span>
+                  </button>
+                  <button
+                    onClick={handleWakeNow}
+                    className="flex-1 py-2.5 rounded-xl bg-white text-black hover:bg-zinc-200 border border-white text-xs font-bold active:scale-95 transition-all flex items-center justify-center gap-1.5 shadow-md"
+                  >
+                    <Sun className="h-3.5 w-3.5 text-black" />
+                    <span>صحيت الآن 🌅</span>
+                  </button>
+                </>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between text-[11px] text-zinc-400 pt-0.5">
+              <span className="font-mono text-zinc-300">الهدف: 8 ساعات لبناء العضلات</span>
+              <span>آخر نوم: <strong className="text-white font-mono">{lastSleepDuration}</strong></span>
+            </div>
+          </div>
+
           {/* Card A: College & Classroom Tasks */}
-          <div className="p-4 rounded-3xl apple-glass border border-white/10 space-y-2.5">
+          <div className="p-3.5 rounded-2xl apple-glass border border-white/10 space-y-2.5 shadow-md">
             <div className="flex items-center justify-between pb-1.5 border-b border-white/5">
               <div className="flex items-center gap-2">
                 <button
@@ -464,12 +560,12 @@ export const MobileFocusHub: React.FC<MobileFocusHubProps> = ({ onOpenSideDrawer
               </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               {plan.classroomTasks.map((task) => (
                 <div
                   key={task.id}
                   onClick={() => handleToggleClassroom(task.id)}
-                  className={`flex items-start justify-between gap-3 p-3 rounded-2xl border transition-all cursor-pointer ${
+                  className={`flex items-start justify-between gap-3 p-2.5 rounded-xl border transition-all cursor-pointer ${
                     task.completed
                       ? 'bg-white/10 border-white/20 text-zinc-300'
                       : 'bg-white/[0.02] border-white/5 text-white hover:bg-white/[0.05]'
@@ -491,7 +587,7 @@ export const MobileFocusHub: React.FC<MobileFocusHubProps> = ({ onOpenSideDrawer
           </div>
 
           {/* Card B: Nexus Legal Cold Email Targets */}
-          <div className="p-4 rounded-3xl apple-glass border border-white/10 space-y-3">
+          <div className="p-3.5 rounded-2xl apple-glass border border-white/10 space-y-2.5 shadow-md">
             <div className="flex items-center justify-between pb-1.5 border-b border-white/5">
               <span className="text-[11px] font-mono text-white font-bold bg-white/10 px-2 py-0.5 rounded-full border border-white/15">
                 {plan.nexusTargets.sentCount}/{plan.nexusTargets.dailyEmailTarget} إيميل
@@ -506,7 +602,7 @@ export const MobileFocusHub: React.FC<MobileFocusHubProps> = ({ onOpenSideDrawer
               الهدف اليومي: إرسال 20 إيميل للمكاتب الأمريكية لعرض التجربة المجانية 14 يوماً.
             </p>
 
-            <div className="p-2.5 rounded-2xl bg-white/[0.03] border border-white/5 space-y-1.5">
+            <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/5 space-y-1.5">
               <div className="flex items-center justify-between text-[11px]">
                 <button
                   onClick={handleCopyHook}
@@ -539,7 +635,7 @@ export const MobileFocusHub: React.FC<MobileFocusHubProps> = ({ onOpenSideDrawer
           </div>
 
           {/* Card C: Nutrition & Dense Calorie Meals (54kg -> 70kg) */}
-          <div className="p-4 rounded-3xl apple-glass border border-white/10 space-y-3">
+          <div className="p-3.5 rounded-2xl apple-glass border border-white/10 space-y-2.5 shadow-md">
             <div className="flex items-center justify-between pb-1.5 border-b border-white/5">
               <div className="flex items-center gap-2">
                 <button
@@ -565,13 +661,13 @@ export const MobileFocusHub: React.FC<MobileFocusHubProps> = ({ onOpenSideDrawer
               </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               {plan.nutritionAndWorkout.meals.map((meal) => {
                 const showAlt = showAlternativeMeal[meal.id] || false;
                 return (
                   <div
                     key={meal.id}
-                    className={`p-3 rounded-2xl border transition-all ${
+                    className={`p-2.5 rounded-xl border transition-all ${
                       meal.completed
                         ? 'bg-white/10 border-white/20 text-zinc-300'
                         : 'bg-white/[0.02] border-white/5 text-zinc-200'
@@ -604,7 +700,7 @@ export const MobileFocusHub: React.FC<MobileFocusHubProps> = ({ onOpenSideDrawer
                       onClick={() =>
                         setShowAlternativeMeal((prev) => ({ ...prev, [meal.id]: !prev[meal.id] }))
                       }
-                      className="mt-1.5 text-[10px] text-zinc-500 hover:text-white pr-6 underline flex items-center gap-1"
+                      className="mt-1 text-[10px] text-zinc-500 hover:text-white pr-6 underline flex items-center gap-1"
                     >
                       <span>{showAlt ? 'عرض الوجبة الأساسية' : 'غير متوفر؟ عرض الوجبة البديلة'}</span>
                     </button>
@@ -615,7 +711,7 @@ export const MobileFocusHub: React.FC<MobileFocusHubProps> = ({ onOpenSideDrawer
           </div>
 
           {/* Card D: Today's Home Workout & Mobility */}
-          <div className="p-4 rounded-3xl apple-glass border border-white/10 space-y-2.5">
+          <div className="p-3.5 rounded-2xl apple-glass border border-white/10 space-y-2.5 shadow-md">
             <div className="flex items-center justify-between pb-1.5 border-b border-white/5">
               <span className="text-[11px] text-zinc-400">40 دقيقة + 10 دقائق مرونة</span>
               <div className="flex items-center gap-1.5 text-xs font-bold text-white">
@@ -624,13 +720,13 @@ export const MobileFocusHub: React.FC<MobileFocusHubProps> = ({ onOpenSideDrawer
               </div>
             </div>
 
-            <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/5 space-y-2">
+            <div className="p-2.5 rounded-xl bg-white/[0.02] border border-white/5 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-white">{plan.nutritionAndWorkout.workoutTitle}</span>
-                <span className="text-[10px] text-zinc-300 font-mono">علمي لزيادة الكتلة</span>
+                <span className="text-[10px] text-zinc-300 font-mono">زيادة الكتلة</span>
               </div>
 
-              <div className="space-y-1.5 pr-2 border-r-2 border-white/40">
+              <div className="space-y-1 pr-2 border-r-2 border-white/40">
                 {plan.nutritionAndWorkout.workoutExercises.map((ex, idx) => (
                   <p key={idx} className="text-[11px] text-zinc-300">
                     • {ex}
@@ -639,7 +735,7 @@ export const MobileFocusHub: React.FC<MobileFocusHubProps> = ({ onOpenSideDrawer
               </div>
 
               <div className="pt-2 border-t border-white/5 flex items-center justify-between">
-                <span className="text-[11px] text-zinc-400 font-medium">10 دقائق استطالة مفاصل ومرونة</span>
+                <span className="text-[11px] text-zinc-400 font-medium">10 د استطالة مفاصل</span>
                 <button
                   onClick={handleToggleWorkout}
                   className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition-all ${
@@ -655,7 +751,7 @@ export const MobileFocusHub: React.FC<MobileFocusHubProps> = ({ onOpenSideDrawer
           </div>
 
           {/* Card E: Roma Cafe Persistent Backup */}
-          <div className="p-4 rounded-3xl apple-glass border border-white/10 flex items-center justify-between gap-3">
+          <div className="p-3.5 rounded-2xl apple-glass border border-white/10 flex items-center justify-between gap-3 shadow-md">
             <div>
               <div className="flex items-center gap-2">
                 <Coffee className="h-4 w-4 text-white" />
@@ -668,7 +764,7 @@ export const MobileFocusHub: React.FC<MobileFocusHubProps> = ({ onOpenSideDrawer
 
             <button
               onClick={handleBackupRomaCafe}
-              className="px-3.5 py-2 rounded-2xl bg-white/[0.05] hover:bg-white/10 border border-white/10 text-xs font-bold text-white active:scale-95 transition-all flex items-center gap-1.5 flex-shrink-0"
+              className="px-3.5 py-2 rounded-xl bg-white/[0.05] hover:bg-white/10 border border-white/10 text-xs font-bold text-white active:scale-95 transition-all flex items-center gap-1.5 flex-shrink-0"
             >
               <ShieldCheck className="h-3.5 w-3.5" />
               <span>نسخ احتياطي</span>
@@ -676,7 +772,7 @@ export const MobileFocusHub: React.FC<MobileFocusHubProps> = ({ onOpenSideDrawer
           </div>
 
           {/* Card F: English & Coursera (15 min habit) */}
-          <div className="p-4 rounded-3xl apple-glass border border-white/10 flex items-center justify-between gap-3">
+          <div className="p-3.5 rounded-2xl apple-glass border border-white/10 flex items-center justify-between gap-3 shadow-md">
             <div>
               <div className="flex items-center gap-2">
                 <BookOpen className="h-4 w-4 text-white" />
@@ -689,7 +785,7 @@ export const MobileFocusHub: React.FC<MobileFocusHubProps> = ({ onOpenSideDrawer
 
             <button
               onClick={handleToggleEnglish}
-              className={`p-2 rounded-2xl border text-xs font-bold transition-all ${
+              className={`p-2 rounded-xl border text-xs font-bold transition-all ${
                 plan.selfGrowth.englishCompleted
                   ? 'bg-white text-black border-white'
                   : 'bg-white/[0.04] text-zinc-300 border-white/10'
@@ -705,13 +801,13 @@ export const MobileFocusHub: React.FC<MobileFocusHubProps> = ({ onOpenSideDrawer
       {/* 4. SUBTAB: NEXUS SALES HUB */}
       {activeSubTab === 'nexus' && (
         <div className="space-y-3 animate-in fade-in duration-200">
-          <div className="p-4 rounded-3xl apple-glass border border-white/10 space-y-3">
+          <div className="p-3.5 rounded-2xl apple-glass border border-white/10 space-y-3 shadow-md">
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
               <Briefcase className="h-4 w-4 text-white" />
               <span>استراتيجية مبيعات نيكسيس للمحامين الأمريكيين</span>
             </h3>
 
-            <div className="p-3 rounded-2xl bg-white/[0.04] border border-white/10 text-xs text-zinc-200 space-y-1">
+            <div className="p-3 rounded-xl bg-white/[0.04] border border-white/10 text-xs text-zinc-200 space-y-1">
               <p className="font-bold text-white">القاعدة الذهبية لتحقيق أول بيعة:</p>
               <p className="text-[11px] leading-relaxed text-zinc-300">
                 لا تطلب من المحامي $199 مباشرة من أول رسالة! اعرض عليه تجربة مجانية 14 يوماً بدون بطاقة بنكية، توضح كيف تعمل الأداة على الرام دون إنترنت لمنع تسريب أسرار الموكلين (ABA 512).
@@ -720,7 +816,7 @@ export const MobileFocusHub: React.FC<MobileFocusHubProps> = ({ onOpenSideDrawer
 
             <div className="space-y-2">
               <label className="text-xs font-bold text-zinc-300 block">صيغة الإيميل البارد المعتمدة:</label>
-              <div className="p-3 rounded-2xl bg-black/50 border border-white/10 font-mono text-[11px] text-zinc-300 text-left dir-ltr select-all space-y-2">
+              <div className="p-3 rounded-xl bg-black/50 border border-white/10 font-mono text-[11px] text-zinc-300 text-left dir-ltr select-all space-y-2">
                 <p><strong>Subject:</strong> Privileged document analysis without cloud data leakage</p>
                 <p>Hi [Attorney Name],</p>
                 <p>Under ABA Formal Opinion 512, sending privileged client files to public AI servers poses serious confidentiality risks.</p>
@@ -734,7 +830,7 @@ export const MobileFocusHub: React.FC<MobileFocusHubProps> = ({ onOpenSideDrawer
                   navigator.clipboard.writeText(`Subject: Privileged document analysis without cloud data leakage\n\nHi [Attorney Name],\n\nUnder ABA Formal Opinion 512, sending privileged client files to public AI servers poses serious confidentiality risks.\n\nWe built Nexus Legal AI to run 100% in RAM locally on your laptop—zero internet connection required, zero data stored.\n\nWould you be open to a 14-day zero-risk trial on your local PC to see how it audits case files securely?\n\nBest regards,\nMohammad Qrman — Lead Systems Architect`);
                   alert('تم نسخ نص الإيميل بالكامل للحافظة!');
                 }}
-                className="w-full py-2.5 rounded-2xl bg-white hover:bg-zinc-200 text-black font-bold text-xs shadow-md transition-all active:scale-95 flex items-center justify-center gap-2"
+                className="w-full py-2.5 rounded-xl bg-white hover:bg-zinc-200 text-black font-bold text-xs shadow-md transition-all active:scale-95 flex items-center justify-center gap-2"
               >
                 <Copy className="h-3.5 w-3.5" />
                 <span>نسخ نص الإيميل الأمريكي بالكامل</span>
@@ -747,7 +843,7 @@ export const MobileFocusHub: React.FC<MobileFocusHubProps> = ({ onOpenSideDrawer
       {/* 5. SUBTAB: COLLEGE & CLASSROOM */}
       {activeSubTab === 'college' && (
         <div className="space-y-3 animate-in fade-in duration-200">
-          <div className="p-4 rounded-3xl apple-glass border border-white/10 space-y-3">
+          <div className="p-3.5 rounded-2xl apple-glass border border-white/10 space-y-3 shadow-md">
             <div className="flex items-center justify-between">
               <button
                 onClick={() => setShowAddTaskModal(true)}
@@ -768,7 +864,7 @@ export const MobileFocusHub: React.FC<MobileFocusHubProps> = ({ onOpenSideDrawer
 
             <div className="space-y-2">
               {plan.classroomTasks.map((t) => (
-                <div key={t.id} className="p-3 rounded-2xl bg-white/[0.03] border border-white/5 flex items-center justify-between">
+                <div key={t.id} className="p-2.5 rounded-xl bg-white/[0.03] border border-white/5 flex items-center justify-between">
                   <div>
                     <p className="text-xs font-bold text-white">{t.taskTitle}</p>
                     <span className="text-[10px] text-zinc-400">{t.subject}</span>
@@ -780,7 +876,7 @@ export const MobileFocusHub: React.FC<MobileFocusHubProps> = ({ onOpenSideDrawer
               ))}
             </div>
 
-            <div className="p-3.5 rounded-2xl bg-white/[0.02] border border-white/5 space-y-2">
+            <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-white">مسار الشهادات في Coursera:</span>
                 <span className="text-[10px] text-zinc-300 font-mono">CV Builder</span>
@@ -796,7 +892,7 @@ export const MobileFocusHub: React.FC<MobileFocusHubProps> = ({ onOpenSideDrawer
       {/* 6. SUBTAB: BODY TRANSFORMATION (54 -> 70 KG) */}
       {activeSubTab === 'body' && (
         <div className="space-y-3 animate-in fade-in duration-200">
-          <div className="p-4 rounded-3xl apple-glass border border-white/10 space-y-3">
+          <div className="p-3.5 rounded-2xl apple-glass border border-white/10 space-y-3 shadow-md">
             <div className="flex items-center justify-between">
               <button
                 onClick={() => setShowCalorieCalc(true)}
@@ -811,7 +907,7 @@ export const MobileFocusHub: React.FC<MobileFocusHubProps> = ({ onOpenSideDrawer
               </h3>
             </div>
 
-            <div className="p-3 rounded-2xl bg-white/[0.03] border border-white/5 space-y-2">
+            <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5 space-y-2">
               <div className="flex items-center justify-between text-xs font-bold">
                 <span className="text-white">الوزن الحالي: 54 كجم</span>
                 <span className="text-zinc-400">الهدف: 70 كجم</span>
@@ -1074,17 +1170,23 @@ export const MobileFocusHub: React.FC<MobileFocusHubProps> = ({ onOpenSideDrawer
         </div>
       )}
 
-      {/* MODAL 5: Alarm Manager (ضبط المنبه والنغمات) */}
+      {/* MODAL 5: Alarm Manager */}
       <AlarmManagerModal 
         isOpen={showAlarmModal} 
         onClose={() => setShowAlarmModal(false)} 
       />
 
-      {/* MODAL 6: Google Classroom Bridge & Importer */}
+      {/* MODAL 6: Google Classroom Bridge */}
       <ClassroomBridgeModal
         isOpen={showClassroomModal}
         onClose={() => setShowClassroomModal(false)}
         onTaskAdded={() => setPlan(PersonalFocusEngine.getTodayPlan())}
+      />
+
+      {/* MODAL 7: Sleep & Wake Logger Modal */}
+      <SleepLoggerModal
+        isOpen={showSleepModal}
+        onClose={() => setShowSleepModal(false)}
       />
 
       {/* Full-Screen Alarm Ringing Overlay */}

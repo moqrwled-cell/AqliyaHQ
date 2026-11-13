@@ -1,113 +1,84 @@
 import React from 'react';
-import { Sparkles, Target, Bot, Plus, LayoutGrid, PhoneCall } from 'lucide-react';
+import { Sparkles, TrendingUp, Briefcase, Bot, Menu } from 'lucide-react';
 
 interface MobileNavProps {
-  activeTab: 'focus' | 'deck' | 'workspace' | 'missions' | 'vault_browser' | 'accounts' | 'intel' | 'radar' | 'swarm' | 'memory' | 'ai' | 'project_life' | 'opportunity_radar';
-  onSelectTab: (tab: 'focus' | 'deck' | 'workspace' | 'missions' | 'vault_browser' | 'accounts' | 'intel' | 'radar' | 'swarm' | 'memory' | 'ai' | 'project_life' | 'opportunity_radar') => void;
-  onQuickCapture: () => void;
-  onOpenVoiceCall: () => void;
+  activeTab: string;
+  onSelectTab: (tab: any) => void;
+  onOpenSideDrawer: () => void;
 }
 
 export const MobileNav: React.FC<MobileNavProps> = ({
   activeTab,
   onSelectTab,
-  onQuickCapture,
-  onOpenVoiceCall,
+  onOpenSideDrawer,
 }) => {
+  const navItems = [
+    {
+      id: 'focus',
+      label: 'اليوم',
+      icon: Sparkles,
+    },
+    {
+      id: 'discipline',
+      label: 'التطور والنوم',
+      icon: TrendingUp,
+    },
+    {
+      id: 'missions',
+      label: 'المشاريع',
+      icon: Briefcase,
+    },
+    {
+      id: 'ai',
+      label: 'المستشار',
+      icon: Bot,
+    },
+    {
+      id: 'drawer',
+      label: 'القائمة',
+      icon: Menu,
+      isDrawerTrigger: true,
+    },
+  ];
+
   return (
     <nav 
-      aria-label="شريط التنقل السفلي"
-      className="lg:hidden fixed bottom-0 left-0 right-0 z-40 apple-glass border-t border-white/10 px-3 py-2 backdrop-blur-3xl pb-safe"
+      aria-label="شريط التنقل السفلي الفاخر"
+      className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#09090b]/92 backdrop-blur-2xl border-t border-white/10 px-2 py-1.5 pb-safe"
     >
-      <div className="flex items-center justify-between max-w-md mx-auto relative px-1">
-        
-        {/* 1. خطة اليوم (Primary Focus Hub) */}
-        <button
-          onClick={() => onSelectTab('focus')}
-          className={`flex-1 flex flex-col items-center justify-center gap-1 py-1 px-2 rounded-2xl transition-all ${
-            activeTab === 'focus' 
-              ? 'text-emerald-400 font-bold scale-105' 
-              : 'text-zinc-400 hover:text-zinc-200'
-          }`}
-        >
-          <div className="relative">
-            <Sparkles className="h-5 w-5 stroke-[2.2]" />
-            {activeTab === 'focus' && (
-              <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]" />
-            )}
-          </div>
-          <span className="text-[11px] font-medium tracking-tight">اليوم</span>
-        </button>
+      <div className="flex items-center justify-around max-w-md mx-auto relative">
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = activeTab === item.id;
 
-        {/* 2. المشاريع النشطة (Missions: Nexus & Roma Cafe) */}
-        <button
-          onClick={() => onSelectTab('missions')}
-          className={`flex-1 flex flex-col items-center justify-center gap-1 py-1 px-2 rounded-2xl transition-all ${
-            activeTab === 'missions' 
-              ? 'text-emerald-400 font-bold scale-105' 
-              : 'text-zinc-400 hover:text-zinc-200'
-          }`}
-        >
-          <div className="relative">
-            <Target className="h-5 w-5 stroke-[2]" />
-            {activeTab === 'missions' && (
-              <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]" />
-            )}
-          </div>
-          <span className="text-[11px] font-medium tracking-tight">المشاريع</span>
-        </button>
-
-        {/* 3. Central Action Button (Quick Capture / Voice) */}
-        <div className="flex-shrink-0 px-2 -top-4 relative">
-          <button
-            onClick={onQuickCapture}
-            onContextMenu={(e) => {
-              e.preventDefault();
-              onOpenVoiceCall();
-            }}
-            className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-b from-emerald-400 to-emerald-600 text-zinc-950 shadow-[0_6px_20px_rgba(16,185,129,0.45)] border border-emerald-300/40 active:scale-95 transition-all"
-            title="إضافة ملاحظة سريعة (اضغط مطولاً للمكالمة الصوتية)"
-          >
-            <Plus className="h-6 w-6 stroke-[2.8]" />
-          </button>
-        </div>
-
-        {/* 4. المستشار الذكي (AI Advisor) */}
-        <button
-          onClick={() => onSelectTab('ai')}
-          className={`flex-1 flex flex-col items-center justify-center gap-1 py-1 px-2 rounded-2xl transition-all ${
-            activeTab === 'ai' 
-              ? 'text-emerald-400 font-bold scale-105' 
-              : 'text-zinc-400 hover:text-zinc-200'
-          }`}
-        >
-          <div className="relative">
-            <Bot className="h-5 w-5 stroke-[2]" />
-            {activeTab === 'ai' && (
-              <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]" />
-            )}
-          </div>
-          <span className="text-[11px] font-medium tracking-tight">المستشار</span>
-        </button>
-
-        {/* 5. غرفة العمليات / المزيد (Executive Deck) */}
-        <button
-          onClick={() => onSelectTab('deck')}
-          className={`flex-1 flex flex-col items-center justify-center gap-1 py-1 px-2 rounded-2xl transition-all ${
-            activeTab === 'deck' 
-              ? 'text-emerald-400 font-bold scale-105' 
-              : 'text-zinc-400 hover:text-zinc-200'
-          }`}
-        >
-          <div className="relative">
-            <LayoutGrid className="h-5 w-5 stroke-[2]" />
-            {activeTab === 'deck' && (
-              <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]" />
-            )}
-          </div>
-          <span className="text-[11px] font-medium tracking-tight">التحكم</span>
-        </button>
-
+          return (
+            <button
+              key={item.id}
+              onClick={() => {
+                if (item.isDrawerTrigger) {
+                  onOpenSideDrawer();
+                } else {
+                  onSelectTab(item.id);
+                }
+              }}
+              className={`flex-1 flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-xl transition-all active:scale-95 ${
+                isActive 
+                  ? 'text-white font-bold' 
+                  : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              <div className="relative">
+                <Icon className={`h-4.5 w-4.5 ${isActive ? 'stroke-[2.5]' : 'stroke-[1.8]'}`} />
+                {isActive && (
+                  <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_8px_#ffffff]" />
+                )}
+              </div>
+              <span className={`text-[10px] tracking-tight leading-none ${isActive ? 'text-white font-bold' : 'text-zinc-400 font-medium'}`}>
+                {item.label}
+              </span>
+            </button>
+          );
+        })}
       </div>
     </nav>
   );
