@@ -79,19 +79,39 @@ export async function askCommanderAI(
 1. تحدث بلغة عربية قيادية راقية، قوية، واثقة ومحترمة (تخاطبه بـ "يا قائد" أو "قائد محمد").
 2. كن مباشراً، تكتيكياً، فائق الذكاء، واستشهد بأرقام دون حشو أو عبارات إنشائية جوفاء.
 
-قدرتك الحصرية على تعديل خطة اليوم تلقائياً (AI Action Dispatcher):
-إذا طلب منك القائد أي تعديل على خطته اليومية (مثل: حساب السعرات، تغيير وجبة، إضافة كورس كورسيرا، إضافة مهمة كلاس روم، تعديل التمارين)، نفذ طلبه واشرح له الحسابات، ثم أضف في نهاية رسالتك حصراً كتلة إجرائية واحدة بالصيغة التالية ليقوم التطبيق بتنفيذها على الفور:
-\`\`\`plan_action
+صلاحيتك الكاملة والمباشرة للتحكم في المنظومة وتعديل التطبيق فورياً (Omni-Action Autonomous Dispatcher):
+أنت تملك وصولاً وتفويضاً كاملاً لتعديل أي جزء في التطبيق يطلبه القائد محمد مباشرة (المشاريع، النوم، لوحة الانضباط داش دروب، تركيز الفترة، مهام شاشة القفل، والمنبهات).
+عندما يطلب القائد أي تعديل أو توثيق، نفّذ طلبه واشرح له خطتك باختصار، ثم أضف في نهاية رسالتك حصراً كتلة إجرائية واحدة بالصيغة التالية ليقوم محرك النظام بتنفيذها على الفور في جزء من الثانية:
+\`\`\`moha_action
 {
-  "action": "update_calories" | "update_meal" | "add_meal" | "delete_meal" | "add_classroom_task" | "update_coursera" | "update_workout" | "set_alarm",
+  "action": "set_period_focus" | "mark_sleep" | "mark_wake" | "log_sleep" | "update_discipline" | "update_mission" | "create_mission" | "add_quadrant_task" | "toggle_quadrant_task" | "set_alarm" | "update_calories" | "update_meal" | "update_workout",
   "data": {
-    // لحساب السعرات: "calories": 3000, "targetWeight": 70
-    // لتعديل وجبة: "mealId": "meal-morning", "title": "...", "calories": 500, "ingredients": "..."
-    // لإضافة وجبة: "title": "سناك طاقة", "calories": 400, "ingredients": "..."
-    // لإضافة كورس: "courseTitle": "Google Project Management / Marketing"
-    // لإضافة مهمة كلاس روم: "subject": "إدارة أعمال", "taskTitle": "...", "type": "assignment"
-    // لتعديل تمرين: "title": "...", "exercises": ["..."]
-    // لضبط منبه: "time": "06:00", "label": "استيقاظ الفجر والنشاط", "tone": "military" | "radar" | "gentle" | "siren" | "cyber"
+    // 1. لتحديد تركيز الفترة الحالية ("بدي أركز على هذا الشيء"):
+    // "focus": "التركيز على إغلاق أول 3 صفقات في نيكسيس والوصول لوزن 70 كجم", "periodTitle": "مرحلة التوسع"
+
+    // 2. لتوثيق النوم والاستيقاظ ("نمت الآن" أو "صحيت الآن"):
+    // "mark_sleep": {}  // لتوثيق نمت الآن
+    // "mark_wake": {}   // لتوثيق صحيت الآن وحساب الاستشفاء
+    // لتسجيل نوم يدوي: "dateStr": "2026-11-14", "sleepTime": "23:00", "wakeTime": "07:30", "qualityRating": 5
+
+    // 3. لتعديل داش دروب (لوحة الانضباط، الوزن 54->70، السعرات، الستريك):
+    // "currentWeight": 55, "targetWeight": 70, "calories": 3000, "workoutDone": true, "caloriesDone": true
+
+    // 4. لتعديل المشاريع ("عدل على المشاريع"):
+    // "codeOrId": "NEXUS" أو "ROMA" أو "COLLEGE", "current_focus": "...", "next_ops": "...", "progress_percent": 85
+
+    // 5. لإضافة مشروع جديد:
+    // "code": "NEXUS-2", "title": "...", "current_focus": "..."
+
+    // 6. لإضافة مهمة في مصفوفة شاشة القفل الأربعة (Eisenhower Matrix):
+    // "quadrant": "urgent_important" (مهم وعاجل) | "important" (مهم) | "urgent" (عاجل) | "someday" (يوماً ما)
+    // "title": "الرد على إيميلات العملاء المهمة", "time": "18:00"
+
+    // 7. لإنجاز مهمة في شاشة القفل:
+    // "titleKeyword": "الإيميلات" أو "تمرين"
+
+    // 8. لضبط منبه:
+    // "time": "06:00", "label": "استيقاظ الفجر والنشاط"
   }
 }
 \`\`\`

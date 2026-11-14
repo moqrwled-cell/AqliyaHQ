@@ -165,8 +165,8 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
     }
   };
 
-  const handleSave = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSave = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!title.trim() || !url.trim()) return;
 
     const tags = tagInput
@@ -312,15 +312,28 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
             )}
           </div>
 
-          <button
-            type="button"
-            onClick={() => runAnalysis(initialText)}
-            disabled={isAnalyzing}
-            className="p-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] text-zinc-300 hover:text-white transition-all disabled:opacity-50"
-            title="إعادة الفحص والتحليل"
-          >
-            <RotateCw className={`h-3.5 w-3.5 ${isAnalyzing ? 'animate-spin' : ''}`} />
-          </button>
+          <div className="flex items-center gap-1.5">
+            {analysisDone && (
+              <button
+                type="button"
+                onClick={() => handleSave()}
+                className="px-3 py-1 rounded-xl bg-white text-black font-bold text-xs flex items-center gap-1 shadow-md active:scale-95 transition-all hover:bg-zinc-200"
+              >
+                <Check className="h-3.5 w-3.5" />
+                <span>حفظ فوري ⚡</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => runAnalysis(initialText)}
+              disabled={isAnalyzing}
+              className="p-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] text-zinc-300 hover:text-white transition-all disabled:opacity-50"
+              title="إعادة الفحص والتحليل"
+            >
+              <RotateCw className={`h-3.5 w-3.5 ${isAnalyzing ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
         </div>
 
         {/* Form Body (Scrollable) */}

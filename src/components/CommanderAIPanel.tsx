@@ -18,6 +18,7 @@ import { geminiConfig } from '../lib/gemini';
 import { IntelligenceCoreEngine } from '../lib/intelligence-core/intelligenceCoreEngine';
 import { PersonalFocusEngine } from '../lib/personal-focus/personalFocusEngine';
 import type { PlanMutation } from '../lib/personal-focus/types';
+import { AdvisorActionDispatcher } from '../lib/advisorActionDispatcher';
 
 interface CommanderAIPanelProps {
   messages: ChatMessage[];
@@ -90,7 +91,22 @@ export const CommanderAIPanel: React.FC<CommanderAIPanelProps> = ({
 
       let cleanContent = result.finalReportMarkdown;
 
-      // Extract and execute automated plan mutations if returned by AI
+      // 1. Extract and execute Omni Advisor Actions (نوم، مشاريع، داش دروب، تركيز، مهام شاشة القفل)
+      const mohaActionMatch = cleanContent.match(/```moha_action\s*([\s\S]*?)\s*```/);
+      if (mohaActionMatch && mohaActionMatch[1]) {
+        try {
+          const actionObj = JSON.parse(mohaActionMatch[1]);
+          const res = AdvisorActionDispatcher.execute(actionObj);
+          cleanContent = cleanContent.replace(
+            mohaActionMatch[0],
+            `\n> ⚡ **تم تعديل المنظومة فورياً بنجاح:** ${res.summaryAr}\n`
+          );
+        } catch (err) {
+          console.warn('Moha Action parse error:', err);
+        }
+      }
+
+      // 2. Extract and execute automated plan mutations if returned by AI
       const planActionMatch = cleanContent.match(/```plan_action\s*([\s\S]*?)\s*```/);
       if (planActionMatch && planActionMatch[1]) {
         try {

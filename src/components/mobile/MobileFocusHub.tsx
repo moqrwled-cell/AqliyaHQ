@@ -27,17 +27,20 @@ import {
   Menu,
   ChevronLeft,
   Moon,
-  Sun
+  Sun,
+  Lock
 } from 'lucide-react';
 import { PersonalFocusEngine } from '../../lib/personal-focus/personalFocusEngine';
 import type { DailyPersonalPlan } from '../../lib/personal-focus/types';
 import { NotificationManager } from '../../lib/notifications/notificationManager';
 import { SystemUpdaterEngine } from '../../lib/updater/systemUpdaterEngine';
 import { SleepTrackerEngine } from '../../lib/sleepTrackerEngine';
+import { LockscreenEngine } from '../../lib/lockscreenEngine';
 import { SleepLoggerModal } from './SleepLoggerModal';
 import { AlarmManagerModal } from './AlarmManagerModal';
 import { ClassroomBridgeModal } from './ClassroomBridgeModal';
 import { AlarmRingingOverlay } from './AlarmRingingOverlay';
+import { LuxuryLockscreenView } from './LuxuryLockscreenView';
 
 interface MobileFocusHubProps {
   onOpenSideDrawer?: () => void;
@@ -167,6 +170,18 @@ export const MobileFocusHub: React.FC<MobileFocusHubProps> = ({ onOpenSideDrawer
     }
     return '8h 12m';
   });
+
+  // Lockscreen & Strategic Focus states
+  const [showLockscreenView, setShowLockscreenView] = useState(false);
+  const [periodFocus, setPeriodFocus] = useState(() => LockscreenEngine.getPeriodFocus());
+
+  useEffect(() => {
+    const handleFocusUpdate = () => {
+      setPeriodFocus(LockscreenEngine.getPeriodFocus());
+    };
+    window.addEventListener('moha:period-focus-updated', handleFocusUpdate);
+    return () => window.removeEventListener('moha:period-focus-updated', handleFocusUpdate);
+  }, []);
 
   useEffect(() => {
     const handleSleepUpdate = (e: any) => {
@@ -357,6 +372,15 @@ export const MobileFocusHub: React.FC<MobileFocusHubProps> = ({ onOpenSideDrawer
           {/* Quick Action Icons in Monochrome Lux */}
           <div className="flex items-center gap-1.5">
             <button
+              onClick={() => setShowLockscreenView(true)}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-[11px] font-bold active:scale-95 transition-all shadow-sm hover:bg-amber-500/20"
+              title="شاشة القفل ومصفوفة المهام الفاخرة"
+            >
+              <Lock className="h-3 w-3" />
+              <span>شاشة القفل</span>
+            </button>
+
+            <button
               onClick={handleCopyTelegramReport}
               className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-white/[0.05] border border-white/10 text-white text-[11px] font-semibold active:scale-95 transition-all hover:bg-white/10"
               title="نسخ تقرير اليوم للتيليجرام"
@@ -410,6 +434,24 @@ export const MobileFocusHub: React.FC<MobileFocusHubProps> = ({ onOpenSideDrawer
 
         {/* Isolated Memoized Digital Clock & Dynamic Motivational Message */}
         <LuxuryDigitalClock />
+
+        {/* Strategic Period Focus Banner */}
+        {periodFocus && periodFocus.focus && (
+          <div className="p-2.5 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-between text-right gap-2">
+            <button
+              onClick={() => setShowLockscreenView(true)}
+              className="text-[10px] text-zinc-400 hover:text-white px-2 py-0.5 rounded bg-white/[0.05] border border-white/5 active:scale-95 flex-shrink-0"
+            >
+              عرض ↗
+            </button>
+            <div className="flex items-center gap-2 overflow-hidden">
+              <span className="text-[11px] text-zinc-200 font-medium truncate">{periodFocus.focus}</span>
+              <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20 whitespace-nowrap flex-shrink-0">
+                {periodFocus.periodTitle || 'تركيز المرحلة'}
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Sub-Banner: Shift Badge & Targets */}
         <div className="flex items-center justify-between pt-2 border-t border-white/5 text-[11px]">
@@ -1187,6 +1229,12 @@ export const MobileFocusHub: React.FC<MobileFocusHubProps> = ({ onOpenSideDrawer
       <SleepLoggerModal
         isOpen={showSleepModal}
         onClose={() => setShowSleepModal(false)}
+      />
+
+      {/* MODAL 8: Luxury Lockscreen & Eisenhower Matrix View */}
+      <LuxuryLockscreenView
+        isOpen={showLockscreenView}
+        onClose={() => setShowLockscreenView(false)}
       />
 
       {/* Full-Screen Alarm Ringing Overlay */}
