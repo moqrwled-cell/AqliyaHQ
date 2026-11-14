@@ -27,18 +27,36 @@ public class MainActivity extends BridgeActivity {
             String type = intent.getType();
             if (type != null && ("text/plain".equals(type) || type.startsWith("text/"))) {
                 String subject = intent.getStringExtra(Intent.EXTRA_SUBJECT);
+                String title = intent.getStringExtra(Intent.EXTRA_TITLE);
                 String extraText = intent.getStringExtra(Intent.EXTRA_TEXT);
+                
                 StringBuilder sb = new StringBuilder();
-                if (subject != null && !subject.trim().isEmpty()) {
+                if (title != null && !title.trim().isEmpty()) {
+                    sb.append(title.trim());
+                }
+                if (subject != null && !subject.trim().isEmpty() && !sb.toString().contains(subject.trim())) {
+                    if (sb.length() > 0) sb.append("\n");
                     sb.append(subject.trim());
                 }
-                if (extraText != null && !extraText.trim().isEmpty()) {
-                    if (sb.length() > 0 && !sb.toString().contains(extraText.trim())) {
-                        sb.append("\n").append(extraText.trim());
-                    } else if (sb.length() == 0) {
-                        sb.append(extraText.trim());
+                if (extraText != null && !extraText.trim().isEmpty() && !sb.toString().contains(extraText.trim())) {
+                    if (sb.length() > 0) sb.append("\n");
+                    sb.append(extraText.trim());
+                }
+
+                // Also inspect ClipData for captions, titles or URLs passed by Instagram/TikTok/YouTube
+                if (intent.getClipData() != null) {
+                    for (int i = 0; i < intent.getClipData().getItemCount(); i++) {
+                        CharSequence clipText = intent.getClipData().getItemAt(i).getText();
+                        if (clipText != null && clipText.length() > 0) {
+                            String itemStr = clipText.toString().trim();
+                            if (!itemStr.isEmpty() && !sb.toString().contains(itemStr)) {
+                                if (sb.length() > 0) sb.append("\n");
+                                sb.append(itemStr);
+                            }
+                        }
                     }
                 }
+
                 String result = sb.toString().trim();
                 if (!result.isEmpty()) {
                     this.pendingSharedText = result;
