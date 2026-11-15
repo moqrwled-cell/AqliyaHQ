@@ -7,7 +7,8 @@ import { SleepTrackerEngine } from './sleepTrackerEngine';
 import { LockscreenEngine, type TaskQuadrant } from './lockscreenEngine';
 import { PersonalFocusEngine } from './personal-focus/personalFocusEngine';
 import type { PlanMutation } from './personal-focus/types';
-import type { Mission } from '../types';
+import type { Mission, IntelItem } from '../types';
+import { offlineStorage, supabase } from './supabase';
 
 export interface AdvisorActionPayload {
   action: 
@@ -23,7 +24,9 @@ export interface AdvisorActionPayload {
     | 'set_alarm'
     | 'update_calories'
     | 'update_meal'
-    | 'update_workout';
+    | 'update_workout'
+    | 'delete_intel'
+    | 'update_intel';
   data: Record<string, any>;
 }
 
@@ -262,6 +265,77 @@ export class AdvisorActionDispatcher {
             success: res.success,
             action,
             summaryAr: res.message,
+          };
+        }
+
+        // 12. حذف رابط من الاستخبارات
+        case 'delete_intel': {
+          const id = data.id;
+          const query = (data.query || data.title || '').toLowerCase().trim();
+          const items = offlineStorage.get<IntelItem[]>('intel', []);
+          const target = id 
+            ? items.find((i) => i.id === id)
+            : items.find((i) => i.title.toLowerCase().includes(query) || i.url.toLowerCase().includes(query));
+
+          if (!target) {
+            return { success: false, action, summaryAr: 'لم يتم العثور على الرابط المطلوب حذفه من الاستخبارات.' };
+          }
+
+          const filtered = items.filter((i) => i.id !== target.id);
+          offlineStorage.save('intel', filtered);
+          window.dispatchEvent(new CustomEvent('moha:intel-updated', { detail: { type: 'delete', id: target.id } }));
+
+          try {
+            supabase.from('intel_depot').delete().eq('id', target.id);
+          } catch (e) {
+            offlineStorage.queueSyncAction({ table: 'intel_depot', type: 'delete', data: { id: target.id } });
+          }
+
+          return {
+            success: true,
+            action,
+            summaryAr: `تم حذف الرابط بنجاح: "${target.title}".`,
+          };
+        }
+
+        // 13. تعديل رابط في الاستخبارات
+        case 'update_intel': {
+          const id = data.id;
+          const query = (data.query || data.titleSearch || '').toLowerCase().trim();
+          const items = offlineStorage.get<IntelItem[]>('intel', []);
+          const target = id
+            ? items.find((i) => i.id === id)
+            : items.find((i) => i.title.toLowerCase().includes(query) || i.url.toLowerCase().includes(query));
+
+          if (!target) {
+            return { success: false, action, summaryAr: 'لم يتم العثور على الرابط المطلوب تعديله في الاستخبارات.' };
+          }
+
+          const updated: IntelItem = {
+            ...target,
+            title: data.title || target.title,
+            category: data.category || target.category,
+            problem_solved: data.problem_solved !== undefined ? data.problem_solved : target.problem_solved,
+            key_takeaways: data.key_takeaways !== undefined ? data.key_takeaways : target.key_takeaways,
+            status: data.status || target.status,
+            tags: data.tags || target.tags,
+            updated_at: new Date().toISOString(),
+          };
+
+          const nextList = items.map((i) => (i.id === target.id ? updated : i));
+          offlineStorage.save('intel', nextList);
+          window.dispatchEvent(new CustomEvent('moha:intel-updated', { detail: { type: 'update', updated } }));
+
+          try {
+            (supabase.from('intel_depot') as any).update(updated).eq('id', target.id);
+          } catch (e) {
+            offlineStorage.queueSyncAction({ table: 'intel_depot', type: 'update', data: updated });
+          }
+
+          return {
+            success: true,
+            action,
+            summaryAr: `تم تحديث بيانات الرابط بنجاح: "${updated.title}".`,
           };
         }
 

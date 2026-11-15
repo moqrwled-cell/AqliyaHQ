@@ -37,7 +37,8 @@ import { AlarmRingingOverlay } from './components/mobile/AlarmRingingOverlay';
 import { QuickCaptureModal } from './components/QuickCaptureModal';
 import { exportObsidianMarkdown, exportPureJSON } from './lib/exportMarkdown';
 import { scanSystemWatchdog } from './lib/watchdogEngine';
-import { Menu } from 'lucide-react';
+import { tacticalAudio } from './lib/audio';
+import { Menu, CheckCircle2, X } from 'lucide-react';
 
 export function App() {
   const [isLocked, setIsLocked] = useState(() => {
@@ -59,6 +60,28 @@ export function App() {
   const [mobileTab, setMobileTab] = useState<'focus' | 'discipline' | 'deck' | 'workspace' | 'missions' | 'vault_browser' | 'accounts' | 'intel' | 'radar' | 'swarm' | 'memory' | 'ai' | 'project_life' | 'opportunity_radar'>('focus');
   const [isVoiceCallOpen, setIsVoiceCallOpen] = useState(false);
   const [incomingSharedText, setIncomingSharedText] = useState<string | null>(null);
+  const [intelToast, setIntelToast] = useState<{ id: number; title: string; url: string } | null>(null);
+
+  useEffect(() => {
+    if (intelToast) {
+      const timer = setTimeout(() => {
+        setIntelToast(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [intelToast]);
+
+  // Sync state if an external module or advisor modifies intel
+  useEffect(() => {
+    const handleIntelSync = () => {
+      const cached = offlineStorage.get<IntelItem[]>('intel', []);
+      if (cached) {
+        setIntelItems(cached);
+      }
+    };
+    window.addEventListener('moha:intel-updated', handleIntelSync);
+    return () => window.removeEventListener('moha:intel-updated', handleIntelSync);
+  }, []);
 
   // Handle incoming Android system share intent & auto-unlock to capture directly
   useEffect(() => {
@@ -139,8 +162,15 @@ export function App() {
           setSelectedMission(mRes.data[0] as Mission);
         }
         if (iRes.data) {
-          setIntelItems(iRes.data as IntelItem[]);
-          offlineStorage.save('intel', iRes.data);
+          // Merge remote items with any pending local items so offline-added items are never erased
+          setIntelItems((prevLocal) => {
+            const remoteItems = iRes.data as IntelItem[];
+            const remoteIds = new Set(remoteItems.map((r) => r.id));
+            const pendingLocal = prevLocal.filter((local) => !remoteIds.has(local.id));
+            const merged = [...pendingLocal, ...remoteItems];
+            offlineStorage.save('intel', merged);
+            return merged;
+          });
         }
         if (dRes.data) {
           setDirectives(dRes.data as StrategicDirective[]);
@@ -237,18 +267,122 @@ export function App() {
   };
 
   const handleAddIntelItem = async (item: Omit<IntelItem, 'id' | 'created_at' | 'updated_at'>) => {
+    const id = (typeof crypto !== 'undefined' && crypto.randomUUID)
+      ? crypto.randomUUID()
+      : 'intel-' + Date.now() + '-' + Math.random().toString(36).substring(2, 8);
+    const now = new Date().toISOString();
+    const newItem: IntelItem = {
+      ...item,
+      id,
+      created_at: now,
+      updated_at: now,
+    };
+
+    // 1. Instant local persistence & state update (Optimistic UI)
+    setIntelItems((prev) => {
+      const updated = [newItem, ...prev.filter((i) => i.id !== id)];
+      offlineStorage.save('intel', updated);
+      return updated;
+    });
+
+    // 2. Audio & global event
+    tacticalAudio.playSuccess();
+    window.dispatchEvent(new CustomEvent('moha:intel-updated', { detail: { type: 'add', item: newItem } }));
+
+    // 3. Trigger toast notification with direct navigation shortcut
+    setIntelToast({
+      id: Date.now(),
+      title: newItem.title,
+      url: newItem.url,
+    });
+
+    // 4. Cloud sync to Supabase
     try {
-      const { data } = await (supabase.from('intel_depot') as any).insert(item).select().single();
-      if (data) {
-        setIntelItems((prev) => [data as IntelItem, ...prev]);
+      const { data, error } = await (supabase.from('intel_depot') as any)
+        .insert({
+          id: newItem.id,
+          title: newItem.title,
+          url: newItem.url,
+          category: newItem.category,
+          platform: newItem.platform,
+          problem_solved: newItem.problem_solved,
+          key_takeaways: newItem.key_takeaways,
+          mission_id: newItem.mission_id,
+          tags: newItem.tags,
+          status: newItem.status,
+          thumbnail_url: newItem.thumbnail_url,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.warn('Supabase intel insert error, queuing for offline sync:', error);
+        offlineStorage.queueSyncAction({ table: 'intel_depot', type: 'insert', data: newItem });
+      } else if (data) {
+        setIntelItems((prev) => {
+          const synced = prev.map((i) => (i.id === id ? (data as IntelItem) : i));
+          offlineStorage.save('intel', synced);
+          return synced;
+        });
       }
     } catch (e) {
-      offlineStorage.queueSyncAction({ table: 'intel_depot', type: 'insert', data: item });
+      console.warn('Network offline during intel save, queued:', e);
+      offlineStorage.queueSyncAction({ table: 'intel_depot', type: 'insert', data: newItem });
+    }
+  };
+
+  const handleUpdateIntelItem = async (updated: Partial<IntelItem> & { id: string }) => {
+    setIntelItems((prev) => {
+      const next = prev.map((item) =>
+        item.id === updated.id
+          ? { ...item, ...updated, updated_at: new Date().toISOString() }
+          : item
+      );
+      offlineStorage.save('intel', next);
+      return next;
+    });
+
+    tacticalAudio.playBlip();
+    window.dispatchEvent(new CustomEvent('moha:intel-updated', { detail: { type: 'update', updated } }));
+
+    try {
+      const { error } = await (supabase.from('intel_depot') as any).update(updated).eq('id', updated.id);
+      if (error) {
+        console.warn('Supabase intel update error, queuing offline sync:', error);
+        offlineStorage.queueSyncAction({ table: 'intel_depot', type: 'update', data: updated });
+      }
+    } catch (e) {
+      offlineStorage.queueSyncAction({ table: 'intel_depot', type: 'update', data: updated });
+    }
+  };
+
+  const handleDeleteIntelItem = async (id: string) => {
+    setIntelItems((prev) => {
+      const next = prev.filter((item) => item.id !== id);
+      offlineStorage.save('intel', next);
+      return next;
+    });
+
+    tacticalAudio.playBlip();
+    window.dispatchEvent(new CustomEvent('moha:intel-updated', { detail: { type: 'delete', id } }));
+
+    try {
+      const { error } = await supabase.from('intel_depot').delete().eq('id', id);
+      if (error) {
+        console.warn('Supabase intel delete error, queuing offline sync:', error);
+        offlineStorage.queueSyncAction({ table: 'intel_depot', type: 'delete', data: { id } });
+      }
+    } catch (e) {
+      offlineStorage.queueSyncAction({ table: 'intel_depot', type: 'delete', data: { id } });
     }
   };
 
   const handleUpdateIntelStatus = async (id: string, status: IntelItem['status']) => {
-    setIntelItems((prev) => prev.map((i) => (i.id === id ? { ...i, status } : i)));
+    setIntelItems((prev) => {
+      const next = prev.map((i) => (i.id === id ? { ...i, status, updated_at: new Date().toISOString() } : i));
+      offlineStorage.save('intel', next);
+      return next;
+    });
     try {
       await (supabase.from('intel_depot') as any).update({ status }).eq('id', id);
     } catch (e) {
@@ -601,6 +735,8 @@ export function App() {
                   missions={missions}
                   onAddItem={handleAddIntelItem}
                   onUpdateStatus={handleUpdateIntelStatus}
+                  onUpdateItem={handleUpdateIntelItem}
+                  onDeleteItem={handleDeleteIntelItem}
                 />
               </div>
               <div className="flex-1 min-h-0 flex flex-col">
@@ -735,6 +871,8 @@ export function App() {
                 missions={missions}
                 onAddItem={handleAddIntelItem}
                 onUpdateStatus={handleUpdateIntelStatus}
+                onUpdateItem={handleUpdateIntelItem}
+                onDeleteItem={handleDeleteIntelItem}
               />
             )}
 
@@ -890,6 +1028,37 @@ export function App() {
         onSelectTab={setMobileTab}
         onOpenSideDrawer={() => setIsSideDrawerOpen(true)}
       />
+
+      {/* Global Intel Capture Notification Toast */}
+      {intelToast && (
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 p-3.5 rounded-2xl bg-black/95 border border-white/20 text-white shadow-2xl backdrop-blur-2xl animate-in fade-in slide-in-from-bottom duration-200 max-w-[92vw] sm:max-w-md">
+          <div className="p-2 rounded-xl bg-white/10 text-white shrink-0 border border-white/15">
+            <CheckCircle2 className="h-5 w-5" />
+          </div>
+          <div className="text-right flex-1 min-w-0">
+            <p className="text-xs font-bold text-white flex items-center gap-1.5">
+              <span>تم الحفظ في بنك الاستخبارات بنجاح</span>
+              <span className="text-[10px] text-zinc-400">⚡</span>
+            </p>
+            <p className="text-[11px] text-zinc-400 truncate mt-0.5">{intelToast.title}</p>
+          </div>
+          <button
+            onClick={() => {
+              setMobileTab('intel');
+              setIntelToast(null);
+            }}
+            className="px-3 py-1.5 rounded-xl bg-white hover:bg-zinc-200 text-black font-bold text-xs transition-all active:scale-95 whitespace-nowrap shrink-0 shadow"
+          >
+            عرض الآن ↗
+          </button>
+          <button
+            onClick={() => setIntelToast(null)}
+            className="p-1 rounded-lg text-zinc-400 hover:text-white shrink-0"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       {/* Global Alarm Overlay (رنين المنبه في أي مكان بالتطبيق) */}
       <AlarmRingingOverlay />

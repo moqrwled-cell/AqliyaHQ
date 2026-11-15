@@ -167,7 +167,9 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
 
   const handleSave = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!title.trim() || !url.trim()) return;
+
+    const effectiveUrl = url.trim() || initialText.trim() || 'https://aqliya.internal';
+    const effectiveTitle = title.trim() || (effectiveUrl ? `محتوى محفوظ [${platform.toUpperCase()}]` : 'محتوى استخباري جديد');
 
     const tags = tagInput
       .split(/[, ]+/)
@@ -175,8 +177,8 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
       .map((t) => t.replace('#', ''));
 
     onSave({
-      title: title.trim(),
-      url: url.trim(),
+      title: effectiveTitle,
+      url: effectiveUrl,
       category: category as IntelCategory,
       platform,
       problem_solved: problemSolved.trim() || null,
@@ -313,16 +315,15 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
           </div>
 
           <div className="flex items-center gap-1.5">
-            {analysisDone && (
-              <button
-                type="button"
-                onClick={() => handleSave()}
-                className="px-3 py-1 rounded-xl bg-white text-black font-bold text-xs flex items-center gap-1 shadow-md active:scale-95 transition-all hover:bg-zinc-200"
-              >
-                <Check className="h-3.5 w-3.5" />
-                <span>حفظ فوري ⚡</span>
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={() => handleSave()}
+              className="px-3 py-1 rounded-xl bg-white text-black font-bold text-xs flex items-center gap-1 shadow-md active:scale-95 transition-all hover:bg-zinc-200"
+              title="حفظ فوري في بنك الاستخبارات"
+            >
+              <Check className="h-3.5 w-3.5" />
+              <span>حفظ فوري ⚡</span>
+            </button>
 
             <button
               type="button"

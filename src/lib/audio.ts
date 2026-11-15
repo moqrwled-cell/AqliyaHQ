@@ -5,6 +5,7 @@ class MutedAudioEngine {
   playConfirm() {}
   playAlert() {}
   playSonarPing() {}
+  playSuccess() {}
 
   stopSpeaking() {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
