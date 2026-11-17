@@ -37,6 +37,7 @@ import { AlarmRingingOverlay } from './components/mobile/AlarmRingingOverlay';
 import { QuickCaptureModal } from './components/QuickCaptureModal';
 import { exportObsidianMarkdown, exportPureJSON } from './lib/exportMarkdown';
 import { scanSystemWatchdog } from './lib/watchdogEngine';
+import { GmailClassroomBridge } from './lib/classroom/gmailClassroomBridge';
 import { tacticalAudio } from './lib/audio';
 import { Menu, CheckCircle2, X } from 'lucide-react';
 
@@ -99,8 +100,23 @@ export function App() {
       }
     };
 
+    // Listen for incoming Android system notifications from Google Classroom or Gmail
+    (window as any).onAqliyaNotificationReceived = (notif: { package: string; title: string; text: string }) => {
+      if (!notif) return;
+      console.log('Interception received from Android Notification Listener:', notif);
+      const handled = GmailClassroomBridge.handleIncomingNotification(notif);
+      if (handled) {
+        setIntelToast({
+          id: Date.now(),
+          title: `تكليف دراسي ملتقط: ${notif.title || notif.text.slice(0, 30)}`,
+          url: '',
+        });
+      }
+    };
+
     return () => {
       delete (window as any).onAqliyaSharedText;
+      delete (window as any).onAqliyaNotificationReceived;
     };
   }, []);
 

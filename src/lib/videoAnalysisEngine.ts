@@ -98,6 +98,25 @@ export class VideoAnalysisEngine {
   }
 
   /**
+   * Check if local on-device Termux YT-DLP daemon is running on phone
+   */
+  public static async checkLocalDaemonHealth(): Promise<boolean> {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 1200);
+      const res = await fetch('http://127.0.0.1:8765/health', { signal: controller.signal });
+      clearTimeout(timeout);
+      if (res.ok) {
+        const data = await res.json();
+        return data.status === 'active';
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
    * Fetch live metadata from YouTube, TikTok, Microlink, or noembed fallback
    */
   public static async fetchLiveMetadata(url: string, platform: string): Promise<{
@@ -107,6 +126,32 @@ export class VideoAnalysisEngine {
     description: string | null;
   }> {
     const normalized = this.normalizeUrl(url);
+
+    // 0. High-Priority Local On-Device Termux YT-DLP Daemon (Zero-Server, Zero-Laptop, On-Phone)
+    try {
+      const localController = new AbortController();
+      const localTimeout = setTimeout(() => localController.abort(), 2200);
+      const localRes = await fetch('http://127.0.0.1:8765/extract', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: normalized }),
+        signal: localController.signal,
+      });
+      clearTimeout(localTimeout);
+      if (localRes.ok) {
+        const localData = await localRes.json();
+        if (localData && localData.success !== false && (localData.title || localData.description)) {
+          return {
+            title: localData.title || null,
+            author: localData.uploader || null,
+            thumbnailUrl: localData.thumbnail || null,
+            description: localData.description || null,
+          };
+        }
+      }
+    } catch (e) {
+      // Local daemon offline or timed out, seamlessly proceed to web extractors
+    }
 
     // 1. YouTube & YouTube Shorts (Fast & 100% Reliable via oEmbed + Thumbnail)
     if (platform === 'youtube') {

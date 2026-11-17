@@ -6,12 +6,42 @@ import android.webkit.WebView;
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
+    public static MainActivity instance = null;
     private String pendingSharedText = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        instance = this;
         handleSendIntent(getIntent());
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (instance == this) {
+            instance = null;
+        }
+        super.onDestroy();
+    }
+
+    public static void dispatchNotificationToWeb(final String pkg, final String title, final String text) {
+        if (instance != null && instance.getBridge() != null && instance.getBridge().getWebView() != null) {
+            instance.getBridge().getWebView().post(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        String cleanPkg = pkg == null ? "" : pkg.replace("\\", "\\\\").replace("\"", "\\\"");
+                        String cleanTitle = title == null ? "" : title.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "");
+                        String cleanText = text == null ? "" : text.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "");
+                        
+                        String js = "if (window.onAqliyaNotificationReceived) { window.onAqliyaNotificationReceived({ package: \"" + cleanPkg + "\", title: \"" + cleanTitle + "\", text: \"" + cleanText + "\" }); }";
+                        instance.getBridge().getWebView().evaluateJavascript(js, null);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            });
+        }
     }
 
     @Override
