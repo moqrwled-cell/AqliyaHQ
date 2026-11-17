@@ -467,6 +467,113 @@ export const LuxuryLockscreenView: React.FC<LuxuryLockscreenViewProps> = ({
               </div>
             </div>
 
+            {/* Full Month Calendar Widget (Exact Match to Image 2) */}
+            <div className="p-3.5 rounded-3xl apple-glass border border-white/10 space-y-2.5 shadow-xl text-right" dir="rtl">
+              {/* Header */}
+              <div className="flex items-center justify-between pb-1.5 border-b border-white/5">
+                <span className="text-xs font-bold font-mono text-white tracking-wide">أكتوبر 2026</span>
+                <span className="w-6 h-5 rounded-full bg-white text-black text-[11px] font-black font-mono flex items-center justify-center shadow-sm">
+                  14
+                </span>
+              </div>
+
+              {/* Day Headers (Right to Left: ن ث ر خ ج س ح) */}
+              <div className="grid grid-cols-7 gap-1 text-center font-mono text-[10px] text-zinc-400 pb-1 border-b border-white/5">
+                <span>ن</span>
+                <span>ث</span>
+                <span>ر</span>
+                <span>خ</span>
+                <span>ج</span>
+                <span>س</span>
+                <span>ح</span>
+              </div>
+
+              {/* Days Grid with Color Event Chips */}
+              <div className="grid grid-cols-7 gap-1 text-center font-mono text-[10px]">
+                {[
+                  // Week 1
+                  { d: 28, cur: false, chips: ['تمرين 30...', 'اجتماع الفر...'] },
+                  { d: 29, cur: false, chips: ['الرد على ل...', 'الرد على ي...'] },
+                  { d: 30, cur: false, chips: ['الرد على ا...', 'طبيب الأسن...'] },
+                  { d: 1, cur: true, chips: ['الرد على ر...', 'بادِل'] },
+                  { d: 2, cur: true, chips: ['عشاء الفريق', 'دفع الفواتير'] },
+                  { d: 3, cur: true, chips: ['يوغا', 'ترتيب الد...'] },
+                  { d: 4, cur: true, chips: ['زيارة حدي...'] },
+
+                  // Week 2
+                  { d: 5, cur: true, chips: ['اجتماع الفر...'] },
+                  { d: 6, cur: true, chips: ['الرد على ر...', 'النادي'] },
+                  { d: 7, cur: true, chips: ['شراء أغرا...', 'قراءة 10...'] },
+                  { d: 8, cur: true, chips: ['الرد على ا...', 'اجتماع فرد...'] },
+                  { d: 9, cur: true, chips: ['تمرين 30...', 'ترتيب الم...'] },
+                  { d: 10, cur: true, isToday: true, chips: ['رحلة إلى جدة', 'الرد على ا...'] },
+                  { d: 11, cur: true, chips: ['تخطيط الأ...'] },
+
+                  // Week 3
+                  { d: 12, cur: true, chips: ['رحلة إلى جدة'] },
+                  { d: 13, cur: true, chips: ['الفحص الس...', 'عرض تقديم...'] },
+                  { d: 14, cur: true, chips: [] },
+                  { d: 15, cur: true, chips: ['بادِل'] },
+                  { d: 16, cur: true, chips: ['حفلة موسيق...'] },
+                  { d: 17, cur: true, chips: ['يوغا'] },
+                  { d: 18, cur: true, chips: ['شراء أغرا...'] },
+
+                  // Week 4
+                  { d: 19, cur: true, chips: ['عيد ميلاد أمي', 'اجتماع الفر...'] },
+                  { d: 20, cur: true, chips: ['النادي'] },
+                  { d: 21, cur: true, chips: ['إرجاع طل...'] },
+                  { d: 22, cur: true, chips: ['بادِل'] },
+                  { d: 23, cur: true, chips: [] },
+                  { d: 24, cur: true, chips: ['يوغا', 'زواج صديقي'] },
+                  { d: 25, cur: true, chips: ['تحضير ور...'] },
+
+                  // Week 5
+                  { d: 26, cur: true, chips: ['ورشة عمل', 'غداء الفريق'] },
+                  { d: 27, cur: true, chips: ['النادي'] },
+                  { d: 28, cur: true, chips: [] },
+                  { d: 29, cur: true, chips: ['بادِل'] },
+                  { d: 30, cur: true, chips: ['تجديد اشت...'] },
+                  { d: 31, cur: true, chips: ['يوغا'] },
+                  { d: 1, cur: false, chips: ['هايكنج'] },
+                ].map((item, idx) => {
+                  const getChipColor = (chipText: string) => {
+                    if (chipText.includes('جدة') || chipText.includes('عيد') || chipText.includes('زواج') || chipText.includes('عشاء') || chipText.includes('حدي')) return 'bg-rose-500/90 text-white';
+                    if (chipText.includes('تمرين') || chipText.includes('اجتماع') || chipText.includes('قراءة') || chipText.includes('تخطيط') || chipText.includes('عرض') || chipText.includes('تحضير')) return 'bg-sky-500/90 text-white';
+                    if (chipText.includes('الرد') || chipText.includes('شراء') || chipText.includes('طبيب') || chipText.includes('حفلة') || chipText.includes('إرجاع') || chipText.includes('غداء') || chipText.includes('هايكنج') || chipText.includes('تجديد')) return 'bg-amber-600/90 text-white';
+                    if (chipText.includes('بادِل') || chipText.includes('النادي') || chipText.includes('يوغا') || chipText.includes('الفحص')) return 'bg-emerald-600/90 text-white';
+                    if (chipText.includes('ورشة')) return 'bg-purple-600/90 text-white';
+                    if (chipText.includes('فواتير')) return 'bg-red-600/90 text-white';
+                    return 'bg-zinc-700/80 text-zinc-200';
+                  };
+
+                  return (
+                    <div key={idx} className="flex flex-col items-center min-h-[46px] p-0.5 rounded-lg hover:bg-white/5 transition-all">
+                      <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                        item.isToday 
+                          ? 'bg-white text-black font-black ring-2 ring-white/50 shadow-md' 
+                          : item.cur ? 'text-zinc-200' : 'text-zinc-600'
+                      }`}>
+                        {item.d}
+                      </div>
+
+                      {/* Event Chips List */}
+                      <div className="w-full flex flex-col gap-0.5 mt-0.5">
+                        {item.chips.slice(0, 2).map((chip, cIdx) => (
+                          <div
+                            key={cIdx}
+                            className={`w-full py-0.2 px-0.5 rounded text-[7.5px] leading-tight truncate text-right font-sans font-medium ${getChipColor(chip)}`}
+                            title={chip}
+                          >
+                            {chip}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* Strategic Focus Card */}
             <div className="p-3.5 rounded-2xl bg-white/[0.04] border border-white/10 space-y-1.5 text-right">
               <div className="flex items-center justify-between">
@@ -491,6 +598,39 @@ export const LuxuryLockscreenView: React.FC<LuxuryLockscreenViewProps> = ({
           </div>
         )}
 
+      </div>
+
+      {/* Bottom Hardware Shortcuts: Flashlight & Camera (Matching iPhone / Android Lockscreen in Images) */}
+      <div className="relative z-10 flex items-center justify-between px-6 pt-2 pb-6 max-w-md mx-auto w-full">
+        {/* Camera Shortcut */}
+        <button 
+          onClick={() => alert('كاميرا شاشة القفل')}
+          className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 flex items-center justify-center text-white backdrop-blur-md transition-all active:scale-90 shadow-lg"
+          title="الكاميرا"
+        >
+          <Camera className="h-5 w-5" />
+        </button>
+
+        {/* Swipe Page Dots */}
+        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-md border border-white/10">
+          <button 
+            onClick={() => setActiveTab('matrix')}
+            className={`h-2 rounded-full transition-all ${activeTab === 'matrix' ? 'w-5 bg-white shadow-sm' : 'w-2 bg-white/30'}`}
+          />
+          <button 
+            onClick={() => setActiveTab('year_progress')}
+            className={`h-2 rounded-full transition-all ${activeTab === 'year_progress' ? 'w-5 bg-white shadow-sm' : 'w-2 bg-white/30'}`}
+          />
+        </div>
+
+        {/* Flashlight Shortcut */}
+        <button 
+          onClick={() => alert('فلاش شاشة القفل')}
+          className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 flex items-center justify-center text-white backdrop-blur-md transition-all active:scale-90 shadow-lg"
+          title="الفلاش"
+        >
+          <Flashlight className="h-5 w-5" />
+        </button>
       </div>
 
       {/* Quick Add Task Modal */}
