@@ -39,6 +39,7 @@ import { LockscreenEngine } from '../../lib/lockscreenEngine';
 import { SleepLoggerModal } from './SleepLoggerModal';
 import { AlarmManagerModal } from './AlarmManagerModal';
 import { ClassroomBridgeModal } from './ClassroomBridgeModal';
+import { OfficialUpdaterModal } from './OfficialUpdaterModal';
 import { AlarmRingingOverlay } from './AlarmRingingOverlay';
 import { LuxuryLockscreenView } from './LuxuryLockscreenView';
 
@@ -1157,60 +1158,11 @@ export const MobileFocusHub: React.FC<MobileFocusHubProps> = ({ onOpenSideDrawer
         </div>
       )}
 
-      {/* MODAL 4: Rapid OTA / Live Update Checker */}
-      {showUpdateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
-          <div className="apple-glass w-full max-w-sm rounded-3xl p-5 border border-white/15 shadow-2xl space-y-3 text-right bg-[#0a0a0c]">
-            <div className="flex items-center justify-between pb-2 border-b border-white/10">
-              <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
-                <Zap className="h-4 w-4 text-white" />
-                <span>مركز التحديث الفوري (Moha Agent OTA)</span>
-              </h3>
-              <button onClick={() => setShowUpdateModal(false)} className="text-zinc-400 hover:text-white">
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div className="space-y-2 text-xs text-zinc-300">
-              <div className="p-3 rounded-2xl bg-white/[0.03] border border-white/5 space-y-1">
-                <div className="flex justify-between">
-                  <span className="text-zinc-400">الإصدار الحالي:</span>
-                  <span className="font-mono text-white font-bold">{SystemUpdaterEngine.CURRENT_VERSION}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-zinc-400">حالة الربط:</span>
-                  <span className="text-white">GitHub Main Auto-Sync</span>
-                </div>
-              </div>
-
-              {updateStatus && (
-                <p className="text-[11px] p-2.5 rounded-xl bg-white/[0.05] border border-white/10 text-zinc-200">
-                  {updateStatus}
-                </p>
-              )}
-
-              <p className="text-[11px] text-zinc-400 leading-relaxed">
-                بدلاً من تحميل وفك الضغط ونقل الملفات يدوياً، يمكنك الضغط على زر <strong>تطبيق وتحديث الكاش الفوري</strong> لتحديث واجهة هاتفك بأحدث كود مباشرة!
-              </p>
-            </div>
-
-            <div className="flex gap-2 pt-2">
-              <button
-                onClick={handleCheckUpdate}
-                className="flex-1 py-2 rounded-xl bg-white/[0.04] text-white text-xs font-bold border border-white/10"
-              >
-                فحص التحديثات
-              </button>
-              <button
-                onClick={handleApplyUpdateReload}
-                className="flex-1 py-2 rounded-xl bg-white text-black text-xs font-bold shadow-md hover:bg-zinc-200"
-              >
-                تطبيق التحديث فوراً ⚡
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* MODAL 4: Official & Innovative System Updater */}
+      <OfficialUpdaterModal
+        isOpen={showUpdateModal}
+        onClose={() => setShowUpdateModal(false)}
+      />
 
       {/* MODAL 5: Alarm Manager */}
       <AlarmManagerModal 

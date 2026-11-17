@@ -3,6 +3,22 @@
   "appName": "Moha Agent",
   "webDir": "dist",
   "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true,
+    "allowNavigation": [
+      "*.github.com",
+      "*.githubusercontent.com",
+      "*.netlify.app",
+      "*.vercel.app",
+      "*.supabase.co",
+      "192.168.*.*",
+      "10.0.*.*",
+      "127.0.0.1",
+      "localhost",
+      "*"
+    ]
+  },
   "android": {
     "allowMixedContent": true,
     "captureInput": true,
