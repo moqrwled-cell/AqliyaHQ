@@ -32,12 +32,13 @@ import { MobileFocusHub } from './components/mobile/MobileFocusHub';
 import { MobileSideDrawer } from './components/mobile/MobileSideDrawer';
 import { DisciplineDashboard } from './components/dashboard/DisciplineDashboard';
 import { AlarmManagerModal } from './components/mobile/AlarmManagerModal';
-import { ClassroomBridgeModal } from './components/mobile/ClassroomBridgeModal';
+import { GoogleWorkspaceHubModal } from './components/google/GoogleWorkspaceHubModal';
 import { AlarmRingingOverlay } from './components/mobile/AlarmRingingOverlay';
 import { QuickCaptureModal } from './components/QuickCaptureModal';
 import { UnifiedBottomNav, type MainNavTab } from './components/navigation/UnifiedBottomNav';
 import { FocusedJarvisHomeScreen } from './components/home/FocusedJarvisHomeScreen';
 import { TasksAndGoalsScreen } from './components/tasks/TasksAndGoalsScreen';
+import { AdvisorProactiveEngine } from './lib/advisor/advisorProactiveEngine';
 import { exportObsidianMarkdown, exportPureJSON } from './lib/exportMarkdown';
 import { scanSystemWatchdog } from './lib/watchdogEngine';
 import { GmailClassroomBridge } from './lib/classroom/gmailClassroomBridge';
@@ -69,6 +70,11 @@ export function App() {
       return () => clearTimeout(timer);
     }
   }, [intelToast]);
+
+  useEffect(() => {
+    AdvisorProactiveEngine.start();
+    return () => AdvisorProactiveEngine.stop();
+  }, []);
 
   // Sync state if an external module or advisor modifies intel
   useEffect(() => {
@@ -993,8 +999,8 @@ export function App() {
         onClose={() => setIsAlarmModalOpen(false)}
       />
 
-      {/* Classroom Bridge Modal */}
-      <ClassroomBridgeModal
+      {/* Official Google Workspace & Academic Hub Modal */}
+      <GoogleWorkspaceHubModal
         isOpen={isClassroomModalOpen}
         onClose={() => setIsClassroomModalOpen(false)}
       />

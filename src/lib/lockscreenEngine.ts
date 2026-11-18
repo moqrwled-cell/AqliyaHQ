@@ -4,6 +4,7 @@
 // ============================================================================
 
 import { LocalNotifications } from '@capacitor/local-notifications';
+import { UnifiedStorage } from './storage/unifiedStorage';
 
 export type TaskQuadrant = 'urgent_important' | 'important' | 'urgent' | 'someday';
 
@@ -243,30 +244,30 @@ export class LockscreenEngine {
    * Sync active urgent/important tasks into an ongoing Android lockscreen notification
    */
   public static async syncLockscreenNotification(): Promise<boolean> {
-    const tasks = this.getTasks().filter((t) => !t.completed);
-    const urgentImportant = tasks.filter((t) => t.quadrant === 'urgent_important');
-    const important = tasks.filter((t) => t.quadrant === 'important');
-    const urgent = tasks.filter((t) => t.quadrant === 'urgent');
+    const unifiedTasks = UnifiedStorage.getTasks().filter((t) => !t.isCompleted);
+    const urgentImportant = unifiedTasks.filter((t) => t.quadrant === 'urgent_important');
+    const important = unifiedTasks.filter((t) => t.quadrant === 'important');
+    const urgent = unifiedTasks.filter((t) => t.quadrant === 'urgent');
 
-    const focus = this.getPeriodFocus();
+    const focus = UnifiedStorage.getPeriodFocus();
 
-    let notificationTitle = 'Moha Agent | شاشة القفل التكتيكية ⚡';
+    let notificationTitle = 'Moha Agent | أولويات شاشة القفل ⚡';
     if (urgentImportant.length > 0) {
       notificationTitle = `🔥 مهم وعاجل (${urgentImportant.length}): ${urgentImportant[0].title}`;
     }
 
     const lines: string[] = [];
     if (urgentImportant.length > 0) {
-      lines.push(`🔥 ${urgentImportant.map((t) => t.title).join(' • ')}`);
+      lines.push(`🔥 عاجل: ${urgentImportant.map((t) => t.title).join(' • ')}`);
     }
     if (important.length > 0) {
-      lines.push(`🟦 ${important.map((t) => t.title).join(' • ')}`);
+      lines.push(`🟦 مهم: ${important.map((t) => t.title).join(' • ')}`);
     }
     if (urgent.length > 0) {
-      lines.push(`⚡ ${urgent.map((t) => t.title).join(' • ')}`);
+      lines.push(`⚡ أولوية: ${urgent.map((t) => t.title).join(' • ')}`);
     }
     if (lines.length === 0) {
-      lines.push(`🎯 التركيز الحالي: ${focus.focus}`);
+      lines.push(`🎯 التركيز الحالي: ${focus.focus || focus.periodTitle}`);
     }
 
     const bodyText = lines.slice(0, 3).join('\n');

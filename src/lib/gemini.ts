@@ -1,4 +1,5 @@
 import type { Mission, IntelItem, CommanderDossier, CommanderMemory } from '../types';
+import { AdvisorToolsEngine } from './advisor/advisorToolsEngine';
 
 export const geminiConfig = {
   getApiKey: (): string => {
@@ -122,7 +123,7 @@ ${context.dossier?.decision_principles?.map((p) => `- ${p}`).join('\n') || '- ا
 - تحويل التحديات والظروف الصعبة في غزة إلى دافع للبناء والتفوق التقني المستمر.
 `;
 
-  const bodyPayload = {
+  const bodyPayload: any = {
     system_instruction: {
       parts: [{ text: systemInstruction }],
     },
@@ -132,6 +133,7 @@ ${context.dossier?.decision_principles?.map((p) => `- ${p}`).join('\n') || '- ا
         parts: [{ text: userPrompt }],
       },
     ],
+    tools: AdvisorToolsEngine.getGeminiToolsDeclaration(),
     generationConfig: {
       temperature: 0.7,
       maxOutputTokens: 1500,
@@ -153,8 +155,38 @@ ${context.dossier?.decision_principles?.map((p) => `- ${p}`).join('\n') || '- ا
       if (res.ok) {
         const data = await res.json();
         const candidate = data.candidates?.[0];
-        if (candidate?.content?.parts?.[0]?.text) {
-          return candidate.content.parts[0].text;
+        const parts = candidate?.content?.parts || [];
+
+        let outputText = '';
+        let executedActionLogId: string | null = null;
+        let requiresConfirmationLogId: string | null = null;
+
+        for (const part of parts) {
+          if (part.text) {
+            outputText += (outputText ? '\n\n' : '') + part.text;
+          }
+          if (part.functionCall) {
+            const { name, args } = part.functionCall;
+            const execResult = AdvisorToolsEngine.executeToolCall(name, args || {});
+            if (execResult.requiresConfirmation) {
+              requiresConfirmationLogId = execResult.logItem.id;
+              outputText += `\n\n> ⚠️ **تأكيد مطلوب:** ${execResult.summaryAr}`;
+            } else {
+              executedActionLogId = execResult.logItem.id;
+              outputText += `\n\n> ⚡ **تم التنفيذ الفوري:** ${execResult.summaryAr}`;
+            }
+          }
+        }
+
+        if (executedActionLogId) {
+          outputText += `\n\n<!-- AQLIYA_ACTION_LOG:${executedActionLogId} -->`;
+        }
+        if (requiresConfirmationLogId) {
+          outputText += `\n\n<!-- AQLIYA_CONFIRMATION_REQUIRED:${requiresConfirmationLogId} -->`;
+        }
+
+        if (outputText.trim()) {
+          return outputText.trim();
         }
       } else {
         const errJson = await res.json().catch(() => ({}));

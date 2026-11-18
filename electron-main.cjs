@@ -12,7 +12,7 @@ function createWindow() {
     height: 920,
     minWidth: 1024,
     minHeight: 700,
-    title: 'Moha Agent | المساعد الشخصي الذكي',
+    title: 'Aqliya HQ | نظام التشغيل الشخصي الذكي',
     backgroundColor: '#09090b',
     transparent: false,
     frame: true,

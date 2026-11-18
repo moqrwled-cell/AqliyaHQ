@@ -40,7 +40,7 @@
   },
   "build": {
     "appId": "com.aqliya.hq",
-    "productName": "Moha Agent",
+    "productName": "Aqliya HQ",
     "directories": {
       "output": "dist-electron"
     },

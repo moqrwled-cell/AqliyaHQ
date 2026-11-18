@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { PhoneOff, Mic, Volume2, Radio } from 'lucide-react';
+import { PhoneOff, Mic, Volume2, Radio, Sparkles } from 'lucide-react';
 import { tacticalAudio } from '../lib/audio';
+import { askCommanderAI } from '../lib/gemini';
+import { offlineStorage } from '../lib/supabase';
 
 interface HandsFreeVoiceCallProps {
   isOpen: boolean;
@@ -104,25 +106,44 @@ export const HandsFreeVoiceCall: React.FC<HandsFreeVoiceCallProps> = ({
     }
   };
 
-  const handleCommanderSpeech = (speech: string) => {
+  const handleCommanderSpeech = async (speech: string) => {
     setCallStatus('speaking');
-    tacticalAudio.playBlip();
+    setLiveUserSpeech(speech);
+    setLiveAIReply('جارٍ المعالجة والتنفيذ عبر محرك المستشار...');
 
-    let reply = `علم يا قائد. استمعت لتوجيهك بخصوص "${speech.slice(0, 30)}...". تم تسجيل الفكرة وربطها بالموقف التكتيكي لمشروع NexusOS. كيف تود توجيه الخطوة القادمة؟`;
+    try {
+      const memories = offlineStorage.get('memories', []);
+      const missions = offlineStorage.get('missions', []);
+      const intel = offlineStorage.get('intel', []);
+      const dossier = offlineStorage.get('dossier', null);
 
-    if (speech.includes('nexus') || speech.includes('مشروع')) {
-      reply = 'مشروع NexusOS حالياً في حالة تركيز كاملة على المعمارية والربط السحابي. سجلت توجيهك وسأقوم بتحديث مؤشر الإنجاز فوراً.';
-    } else if (speech.includes('حل') || speech.includes('ريلز')) {
-      reply = 'لديك حلول تقنية مسجلة في بنك الاستخبارات تتطابق مع ما ذكرته، أقترح مراجعة ريلز الأمان لتسريع الإنجاز.';
+      const reply = await askCommanderAI(speech, {
+        dossier,
+        missions,
+        intel,
+        memories,
+      });
+
+      // Strip markdown tags and system comments for clean Arabic speech synthesis
+      const cleanSpoken = reply
+        .replace(/<!--[\s\S]*?-->/g, '')
+        .replace(/[*#>`_-]/g, '')
+        .trim();
+
+      setLiveAIReply(cleanSpoken);
+      tacticalAudio.speakTactical(cleanSpoken, () => {
+        if (isOpen) setCallStatus('listening');
+      });
+      onTranscriptReceived(speech, reply);
+    } catch (err: any) {
+      const fallback = `علم يا قائد، تم تسجيل طلبك: "${speech}".`;
+      setLiveAIReply(fallback);
+      tacticalAudio.speakTactical(fallback);
+      onTranscriptReceived(speech, fallback);
+      setTimeout(() => {
+        if (isOpen) setCallStatus('listening');
+      }, 3000);
     }
-
-    setLiveAIReply(reply);
-    tacticalAudio.speakTactical(reply);
-    onTranscriptReceived(speech, reply);
-
-    setTimeout(() => {
-      setCallStatus('listening');
-    }, 4000);
   };
 
   if (!isOpen) return null;

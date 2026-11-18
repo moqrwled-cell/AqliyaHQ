@@ -11,7 +11,14 @@ import {
   Copy, 
   Check,
   User,
-  Lightbulb
+  Lightbulb,
+  RotateCcw,
+  AlertTriangle,
+  ShieldCheck,
+  Brain,
+  Trash2,
+  X,
+  Plus
 } from 'lucide-react';
 import type { ChatMessage, Mission, IntelItem, CommanderDossier, CommanderMemory, StrategicDirective, BattleLog } from '../types';
 import { geminiConfig } from '../lib/gemini';
@@ -19,6 +26,8 @@ import { IntelligenceCoreEngine } from '../lib/intelligence-core/intelligenceCor
 import { PersonalFocusEngine } from '../lib/personal-focus/personalFocusEngine';
 import type { PlanMutation } from '../lib/personal-focus/types';
 import { AdvisorActionDispatcher } from '../lib/advisorActionDispatcher';
+import { AdvisorToolsEngine, type AdvisorActionLogItem } from '../lib/advisor/advisorToolsEngine';
+import { offlineStorage } from '../lib/supabase';
 
 interface CommanderAIPanelProps {
   messages: ChatMessage[];
@@ -52,9 +61,54 @@ export const CommanderAIPanel: React.FC<CommanderAIPanelProps> = ({
   const [isGenerating, setIsGenerating] = useState(false);
   const [activeStageText, setActiveStageText] = useState('العقل المركزي: فحص النية وتنسيق الوكيل...');
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [showMemoryModal, setShowMemoryModal] = useState(false);
+  const [actionHistory, setActionHistory] = useState<AdvisorActionLogItem[]>(() => AdvisorToolsEngine.getActionHistory());
+  const [newMemoryContent, setNewMemoryContent] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const hasApiKey = geminiConfig.hasApiKey();
+
+  useEffect(() => {
+    const handleActionsUpdate = () => {
+      setActionHistory(AdvisorToolsEngine.getActionHistory());
+    };
+    window.addEventListener('aqliya:advisor-actions-updated', handleActionsUpdate);
+    return () => window.removeEventListener('aqliya:advisor-actions-updated', handleActionsUpdate);
+  }, []);
+
+  const handleUndo = (actionId: string) => {
+    const res = AdvisorToolsEngine.undoAction(actionId);
+    setActionHistory(AdvisorToolsEngine.getActionHistory());
+    alert(res.messageAr);
+  };
+
+  const handleConfirmSensitive = (actionId: string) => {
+    const res = AdvisorToolsEngine.confirmSensitiveAction(actionId);
+    setActionHistory(AdvisorToolsEngine.getActionHistory());
+    alert(res.messageAr);
+  };
+
+  const handleRejectSensitive = (actionId: string) => {
+    AdvisorToolsEngine.rejectSensitiveAction(actionId);
+    setActionHistory(AdvisorToolsEngine.getActionHistory());
+  };
+
+  const handleDeleteMemoryItem = (memId: string) => {
+    const current = offlineStorage.get<CommanderMemory[]>('memories', []);
+    const filtered = current.filter((m) => m.id !== memId);
+    offlineStorage.save('memories', filtered);
+    window.dispatchEvent(new CustomEvent('aqliya:memory-updated', { detail: { id: memId } }));
+  };
+
+  const handleAddMemoryItem = () => {
+    if (!newMemoryContent.trim()) return;
+    AdvisorToolsEngine.executeToolCall('add_long_term_memory', {
+      content: newMemoryContent.trim(),
+      memory_type: 'preference',
+      importance: 8,
+    });
+    setNewMemoryContent('');
+  };
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -199,6 +253,15 @@ export const CommanderAIPanel: React.FC<CommanderAIPanelProps> = ({
 
         <div className="flex items-center gap-1.5">
           <button
+            onClick={() => setShowMemoryModal(true)}
+            className="flex items-center gap-1 text-xs font-semibold text-cyan-300 bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 px-2.5 py-1.5 rounded-xl transition-all active:scale-95"
+            title="بنك الذاكرة طويلة المدى"
+          >
+            <Brain className="h-3.5 w-3.5 text-cyan-400" />
+            <span className="hidden sm:inline">الذاكرة ({memories.length})</span>
+          </button>
+
+          <button
             onClick={onOpenVoiceCall}
             className="flex items-center gap-1.5 text-xs font-semibold text-emerald-300 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 px-3 py-1.5 rounded-xl transition-all active:scale-95"
             title="محادثة صوتية سريعة"
@@ -276,7 +339,80 @@ export const CommanderAIPanel: React.FC<CommanderAIPanelProps> = ({
                   : 'apple-glass-card text-zinc-100 border border-white/10'
               }`}
             >
-              <div className="whitespace-pre-wrap leading-relaxed">{msg.content}</div>
+              {(() => {
+                const actionLogMatch = msg.content.match(/<!-- AQLIYA_ACTION_LOG:([a-zA-Z0-9_-]+) -->/);
+                const confirmMatch = msg.content.match(/<!-- AQLIYA_CONFIRMATION_REQUIRED:([a-zA-Z0-9_-]+) -->/);
+                const displayContent = msg.content
+                  .replace(/<!-- AQLIYA_ACTION_LOG:([a-zA-Z0-9_-]+) -->/g, '')
+                  .replace(/<!-- AQLIYA_CONFIRMATION_REQUIRED:([a-zA-Z0-9_-]+) -->/g, '')
+                  .trim();
+
+                const actionLogId = actionLogMatch ? actionLogMatch[1] : null;
+                const confirmLogId = confirmMatch ? confirmMatch[1] : null;
+                const actionItem = actionLogId ? actionHistory.find((a) => a.id === actionLogId) : null;
+                const confirmItem = confirmLogId ? actionHistory.find((a) => a.id === confirmLogId) : null;
+
+                return (
+                  <>
+                    <div className="whitespace-pre-wrap leading-relaxed">{displayContent}</div>
+
+                    {/* Action Log Result & 1-Tap Undo */}
+                    {actionItem && (
+                      <div className="mt-2.5 p-2 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-between gap-2">
+                        <div className="text-[11px] text-zinc-300 flex items-center gap-1.5 flex-1 min-w-0">
+                          <span className="text-emerald-400">⚡</span>
+                          <span className="truncate">{actionItem.summaryAr}</span>
+                        </div>
+                        {actionItem.reversible && actionItem.status !== 'undone' && (
+                          <button
+                            onClick={() => handleUndo(actionItem.id)}
+                            className="px-2.5 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 text-[10px] font-bold border border-amber-500/30 flex items-center gap-1 active:scale-95 transition-all flex-shrink-0"
+                            title="تراجع عن هذا الإجراء"
+                          >
+                            <RotateCcw className="h-3 w-3" />
+                            <span>تراجع</span>
+                          </button>
+                        )}
+                        {actionItem.status === 'undone' && (
+                          <span className="text-[10px] text-zinc-500 flex-shrink-0">تم التراجع</span>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Sensitive External Confirmation Gate */}
+                    {confirmItem && (
+                      <div className="mt-2.5 p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 space-y-2">
+                        <div className="flex items-center gap-1.5 text-xs text-amber-300 font-bold">
+                          <AlertTriangle className="h-3.5 w-3.5" />
+                          <span>إجراء خارجي حساس يتطلب تأكيدك بلمسة واحدة</span>
+                        </div>
+                        <p className="text-[11px] text-zinc-300">{confirmItem.summaryAr}</p>
+                        {confirmItem.status === 'pending_confirmation' ? (
+                          <div className="flex items-center gap-2 pt-1">
+                            <button
+                              onClick={() => handleConfirmSensitive(confirmItem.id)}
+                              className="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs shadow flex items-center gap-1 active:scale-95 transition-all"
+                            >
+                              <ShieldCheck className="h-3.5 w-3.5" />
+                              <span>تأكيد الإرسال الآن</span>
+                            </button>
+                            <button
+                              onClick={() => handleRejectSensitive(confirmItem.id)}
+                              className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-zinc-300 text-xs active:scale-95 transition-all"
+                            >
+                              إلغاء
+                            </button>
+                          </div>
+                        ) : (
+                          <p className="text-[10px] text-zinc-400 font-mono">
+                            الحالة: {confirmItem.status === 'executed' ? 'تم التأكيد والتنفيذ بنجاح' : 'تم الإلغاء'}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
 
               {msg.role === 'assistant' && (
                 <div className="mt-2.5 pt-2 border-t border-white/5 flex items-center justify-between text-[11px] text-zinc-400">
@@ -348,6 +484,77 @@ export const CommanderAIPanel: React.FC<CommanderAIPanelProps> = ({
           <Send className="h-4 w-4 stroke-[2.5]" />
         </button>
       </div>
+
+      {/* Long-Term Memory Inspector & Editor Modal */}
+      {showMemoryModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-3 animate-in fade-in duration-200">
+          <div className="w-full max-w-lg bg-[#0d121d] border border-white/15 rounded-3xl p-5 shadow-2xl flex flex-col max-h-[85vh]">
+            <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-3">
+              <button
+                onClick={() => setShowMemoryModal(false)}
+                className="p-1.5 rounded-xl bg-white/10 text-white hover:bg-white/20 transition-all"
+              >
+                <X className="h-5 w-5" />
+              </button>
+              <div className="text-right">
+                <h3 className="text-sm font-bold text-white flex items-center gap-1.5 justify-end">
+                  <span>بنك الذاكرة طويلة المدى</span>
+                  <Brain className="h-4 w-4 text-cyan-400" />
+                </h3>
+                <p className="text-[10px] text-zinc-400">ما يتذكره المستشار عنك وعن مشاريعك وأهدافك</p>
+              </div>
+            </div>
+
+            {/* Quick Add Memory */}
+            <div className="flex items-center gap-2 mb-3">
+              <input
+                type="text"
+                value={newMemoryContent}
+                onChange={(e) => setNewMemoryContent(e.target.value)}
+                placeholder="أضف تفضيلاً أو حقيقة ليتذكرها المستشار دائماً..."
+                className="flex-1 bg-white/[0.05] border border-white/10 rounded-xl px-3 py-2 text-xs text-white text-right focus:outline-none focus:border-cyan-400"
+              />
+              <button
+                onClick={handleAddMemoryItem}
+                className="p-2 rounded-xl bg-cyan-500 text-black font-bold text-xs hover:bg-cyan-400 active:scale-95 transition-all flex items-center gap-1 shrink-0"
+              >
+                <Plus className="h-4 w-4" />
+                <span>حفظ</span>
+              </button>
+            </div>
+
+            {/* Memory List */}
+            <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+              {memories.length === 0 ? (
+                <p className="text-center text-xs text-zinc-500 py-6">لا توجد ذكريات مخزنة حالياً.</p>
+              ) : (
+                memories.map((mem) => (
+                  <div
+                    key={mem.id}
+                    className="p-2.5 rounded-xl bg-white/[0.03] border border-white/5 flex items-start justify-between gap-2"
+                  >
+                    <button
+                      onClick={() => handleDeleteMemoryItem(mem.id)}
+                      className="p-1 rounded-lg text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors shrink-0"
+                      title="حذف هذه الذاكرة"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                    <div className="text-right flex-1 min-w-0">
+                      <p className="text-xs text-zinc-200">{mem.content}</p>
+                      <div className="flex items-center gap-2 mt-1 justify-end text-[10px] text-zinc-500 font-mono">
+                        <span>أهمية {mem.importance}/10</span>
+                        <span>•</span>
+                        <span>{mem.memory_type}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
