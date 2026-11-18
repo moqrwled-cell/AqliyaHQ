@@ -337,18 +337,12 @@ export const MobileFocusHub: React.FC<MobileFocusHubProps> = ({ onOpenSideDrawer
     alert(`تم تعديل هدف السعرات اليومية في خطتك إلى ${cals} سعرة! 💪`);
   };
 
-  const handleCheckUpdate = async () => {
-    setUpdateStatus('جارٍ فحص التحديثات من المستودع...');
-    const res = await SystemUpdaterEngine.checkLatestUpdate();
-    if (res.error) {
-      setUpdateStatus(`تعذر فحص التحديثات: ${res.error}`);
-    } else if (res.latestCommit) {
-      setUpdateStatus(`أحدث نسخة: [${res.latestCommit.sha}] ${res.latestCommit.message}`);
-    }
+  const handleCheckUpdate = () => {
+    setShowUpdateModal(true);
   };
 
   const handleApplyUpdateReload = () => {
-    SystemUpdaterEngine.applyLiveReload();
+    setShowUpdateModal(true);
   };
 
   const calorieData = PersonalFocusEngine.calculateCalorieSurplus(182, 54, 70, 21);

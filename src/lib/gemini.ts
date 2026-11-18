@@ -1,33 +1,11 @@
 import type { Mission, IntelItem, CommanderDossier, CommanderMemory } from '../types';
 
-// Default tactical API key provided by Commander Mohammad Qrman (Obfuscated Base64 for mobile & desktop out-of-the-box readiness)
-const DEFAULT_KEY_B64 = 'QVEuQWI4Uk42TFBkbl9LWGhYTW8tOWlUb1lhaXQ5aVdOWkdNbUxldkpwY3FfVXQwVS1BZFE=';
-
-const getBakedDefaultKey = (): string => {
-  try {
-    const g = globalThis as any;
-    if (typeof window !== 'undefined' && typeof window.atob === 'function') {
-      return window.atob(DEFAULT_KEY_B64);
-    }
-    if (g && g.Buffer) {
-      return g.Buffer.from(DEFAULT_KEY_B64, 'base64').toString('utf-8');
-    }
-  } catch (e) {
-    // fallback
-  }
-  return '';
-};
-
 export const geminiConfig = {
   getApiKey: (): string => {
     const g = globalThis as any;
     const local = typeof localStorage !== 'undefined' ? localStorage.getItem('aqliya_gemini_api_key') : null;
     const envKey = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GEMINI_API_KEY) || (g && g.process?.env?.VITE_GEMINI_API_KEY);
-    return (
-      local ||
-      envKey ||
-      getBakedDefaultKey()
-    );
+    return local || envKey || '';
   },
   setApiKey: (key: string) => {
     if (typeof localStorage !== 'undefined') {

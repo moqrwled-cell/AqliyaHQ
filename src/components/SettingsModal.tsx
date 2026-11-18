@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
-import { Key, Shield, Database, ExternalLink, Check, Sparkles, X, RefreshCw } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Key, Database, ExternalLink, Check, Sparkles, X, RefreshCw, Download, Upload, HardDrive, ShieldCheck } from 'lucide-react';
 import { geminiConfig } from '../lib/gemini';
 import { supabase } from '../lib/supabase';
 import { tacticalAudio } from '../lib/audio';
+import { UnifiedStorage } from '../lib/storage/unifiedStorage';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -11,17 +12,19 @@ interface SettingsModalProps {
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   const [apiKey, setApiKey] = useState(geminiConfig.getApiKey());
-  const [pin, setPin] = useState(localStorage.getItem('aqliya_master_pin') || '1337');
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [testingDb, setTestingDb] = useState(false);
   const [dbStatus, setDbStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [importStatus, setImportStatus] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const stats = UnifiedStorage.getStorageStats();
 
   if (!isOpen) return null;
 
   const handleSave = () => {
     tacticalAudio.playConfirm();
     geminiConfig.setApiKey(apiKey);
-    localStorage.setItem('aqliya_master_pin', pin.trim() || '1337');
     setSavedSuccess(true);
     setTimeout(() => {
       setSavedSuccess(false);
@@ -34,7 +37,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
     setTestingDb(true);
     setDbStatus('idle');
     try {
-      const { data, error } = await supabase.from('missions').select('id').limit(1);
+      const { error } = await supabase.from('missions').select('id').limit(1);
       if (error) throw error;
       setDbStatus('success');
       tacticalAudio.playConfirm();
@@ -47,46 +50,122 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-      <div className="craft-surface-elevated w-full max-w-md rounded-2xl p-6 text-right relative overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b craft-border mb-5">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-zinc-800 border craft-border text-zinc-300">
-              <Key className="h-4 w-4" />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-zinc-100">إعدادات المنظومة والمفاتيح</h3>
-              <p className="text-[11px] text-zinc-400">Google Gemini API • Supabase Cloud • رمز الأمان</p>
-            </div>
-          </div>
+  const handleExportBackup = () => {
+    tacticalAudio.playSuccess();
+    UnifiedStorage.exportFullBackupJSON();
+  };
 
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    tacticalAudio.playBlip();
+    setImportStatus('جارٍ استعادة البيانات والتحقق...');
+    const result = await UnifiedStorage.importFullBackupJSON(file);
+
+    if (result.success) {
+      tacticalAudio.playSuccess();
+      setImportStatus(result.message);
+      setTimeout(() => setImportStatus(null), 4000);
+    } else {
+      tacticalAudio.playAlert();
+      setImportStatus(result.message);
+    }
+    // reset input
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4 animate-in fade-in duration-150">
+      <div className="w-full max-w-lg rounded-2xl bg-[#0d1117] border border-white/10 p-5 text-right relative overflow-hidden shadow-2xl max-h-[90vh] flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-4 flex-shrink-0">
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+            className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
           >
             <X className="h-4 w-4" />
           </button>
+
+          <div className="flex items-center gap-2">
+            <div>
+              <h3 className="text-sm font-bold text-white">إعدادات المنظومة والنسخ الاحتياطي</h3>
+              <p className="text-[11px] text-zinc-400">Google Gemini • حماية البيانات • قاعدة Supabase</p>
+            </div>
+            <div className="p-2 rounded-xl bg-white/[0.05] border border-white/10 text-zinc-300">
+              <Key className="h-4 w-4" />
+            </div>
+          </div>
         </div>
 
-        <div className="space-y-4 text-xs">
-          {/* Google Gemini API Key */}
-          <div className="rounded-xl p-3.5 bg-zinc-900/80 border craft-border">
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="font-bold text-zinc-200 flex items-center gap-1.5">
-                <Sparkles className="h-3.5 w-3.5 text-cyan-400" />
-                <span>Google Gemini API Key (مجاني وسريع)</span>
+        <div className="space-y-4 text-xs overflow-y-auto flex-1 pr-1">
+          {/* Persistent Backup & Restore (Full Data Protection) */}
+          <div className="rounded-xl p-3.5 bg-white/[0.03] border border-white/10 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] text-zinc-400 font-mono">
+                {stats.goalsCount} أهداف • {stats.tasksCount} مهام • {stats.intelCount} استخبارات ({stats.storageUsedKb} KB)
+              </span>
+              <label className="font-bold text-white flex items-center gap-1.5">
+                <HardDrive className="h-3.5 w-3.5 text-amber-400" />
+                <span>النسخ الاحتياطي وحماية البيانات (JSON)</span>
               </label>
+            </div>
+
+            <p className="text-[11px] text-zinc-400 leading-relaxed">
+              تصدير ملف شامل لجميع بياناتك وأهدافك وروابطك المحفوظة، أو استعادتها بلمسة واحدة لضمان عدم ضياع أي بيانات أبداً عند تحديث التطبيق.
+            </p>
+
+            <div className="flex gap-2 pt-1">
+              <button
+                type="button"
+                onClick={handleExportBackup}
+                className="flex-1 py-2 px-3 rounded-xl bg-white/[0.06] hover:bg-white/10 text-white font-bold text-xs flex items-center justify-center gap-1.5 border border-white/10 active:scale-98 transition-all"
+              >
+                <Download className="h-3.5 w-3.5 text-amber-400" />
+                <span>تصدير نسخة كاملة</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="flex-1 py-2 px-3 rounded-xl bg-white/[0.06] hover:bg-white/10 text-white font-bold text-xs flex items-center justify-center gap-1.5 border border-white/10 active:scale-98 transition-all"
+              >
+                <Upload className="h-3.5 w-3.5 text-cyan-400" />
+                <span>استيراد واستعادة</span>
+              </button>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".json"
+                className="hidden"
+                onChange={handleFileChange}
+              />
+            </div>
+
+            {importStatus && (
+              <div className="p-2 rounded-lg bg-white/[0.05] border border-white/10 text-[11px] text-zinc-200 text-center animate-in fade-in">
+                {importStatus}
+              </div>
+            )}
+          </div>
+
+          {/* Google Gemini API Key */}
+          <div className="rounded-xl p-3.5 bg-white/[0.03] border border-white/10 space-y-2">
+            <div className="flex items-center justify-between">
               <a
                 href="https://aistudio.google.com/app/apikey"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-[10px] text-cyan-400 hover:underline flex items-center gap-1 font-telemetry"
+                className="text-[10px] text-cyan-400 hover:underline flex items-center gap-1 font-mono"
               >
                 <span>احصل على مفتاح مجاني</span>
                 <ExternalLink className="h-2.5 w-2.5" />
               </a>
+              <label className="font-bold text-white flex items-center gap-1.5">
+                <Sparkles className="h-3.5 w-3.5 text-cyan-400" />
+                <span>مفتاح Google Gemini API</span>
+              </label>
             </div>
 
             <input
@@ -94,81 +173,59 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
               placeholder="AIzaSy..."
-              className="w-full rounded-lg border craft-border bg-black/60 px-3 py-2 text-xs font-telemetry text-zinc-100 outline-none focus:border-cyan-500/50"
+              className="w-full rounded-xl border border-white/10 bg-black/60 px-3 py-2 text-xs font-mono text-white outline-none focus:border-cyan-500/50"
             />
-            <p className="text-[10px] text-zinc-500 mt-1.5 leading-relaxed">
-              يُستخدم لتشغيل مستشار العمليات الذكي فوراً عبر نموذج <strong>Gemini 1.5 Flash</strong> الفائق السرعة وبدون أي تكلفة.
-            </p>
-          </div>
-
-          {/* Master PIN */}
-          <div className="rounded-xl p-3.5 bg-zinc-900/80 border craft-border">
-            <label className="font-bold text-zinc-200 flex items-center gap-1.5 mb-1.5">
-              <Shield className="h-3.5 w-3.5 text-emerald-400" />
-              <span>رمز الدخول السري للقائد (PIN)</span>
-            </label>
-            <input
-              type="text"
-              maxLength={6}
-              value={pin}
-              onChange={(e) => setPin(e.target.value)}
-              className="w-full rounded-lg border craft-border bg-black/60 px-3 py-2 text-xs font-telemetry text-zinc-100 outline-none focus:border-emerald-500/50"
-            />
-            <p className="text-[10px] text-zinc-500 mt-1.5">
-              الرمز الحالي المستخدم لقفل الثكنة (الافتراضي: 1337).
+            <p className="text-[10px] text-zinc-500 leading-relaxed">
+              المفتاح يُحفظ في جهازك فقط ولا يمر عبر أي خوادم وسيطة. يُستخدم لتشغيل المستشار الذكي وتحليل الروابط.
             </p>
           </div>
 
           {/* Supabase Status */}
-          <div className="rounded-xl p-3.5 bg-zinc-900/80 border craft-border">
-            <div className="flex items-center justify-between mb-2">
-              <span className="font-bold text-zinc-200 flex items-center gap-1.5">
-                <Database className="h-3.5 w-3.5 text-emerald-400" />
-                <span>حالة قاعدة بيانات Supabase</span>
-              </span>
+          <div className="rounded-xl p-3.5 bg-white/[0.03] border border-white/10 space-y-2">
+            <div className="flex items-center justify-between">
               <button
                 type="button"
                 onClick={handleTestDatabase}
                 disabled={testingDb}
-                className="text-[11px] text-zinc-400 hover:text-zinc-200 flex items-center gap-1 border craft-border px-2 py-0.5 rounded bg-zinc-800/60"
+                className="text-[11px] text-zinc-300 hover:text-white flex items-center gap-1 border border-white/10 px-2 py-0.5 rounded-lg bg-white/[0.05]"
               >
                 <RefreshCw className={`h-2.5 w-2.5 ${testingDb ? 'animate-spin' : ''}`} />
                 <span>فحص الاتصال</span>
               </button>
+              <span className="font-bold text-white flex items-center gap-1.5">
+                <Database className="h-3.5 w-3.5 text-emerald-400" />
+                <span>مزامنة Supabase السحابية</span>
+              </span>
             </div>
 
-            <div className="space-y-1 text-[11px] font-telemetry text-zinc-400 bg-black/40 p-2 rounded-lg border craft-border">
+            <div className="space-y-1 text-[11px] font-mono text-zinc-400 bg-black/40 p-2.5 rounded-xl border border-white/5">
               <div className="flex justify-between">
-                <span>PROJECT ID:</span>
                 <span className="text-zinc-200">zydgpjqllgthkqabphth</span>
+                <span>PROJECT ID:</span>
               </div>
               <div className="flex justify-between">
-                <span>REGION:</span>
-                <span className="text-zinc-200">eu-central-1 (Frankfurt)</span>
-              </div>
-              <div className="flex justify-between">
-                <span>STATUS:</span>
                 <span className="text-emerald-400 font-bold">
                   {dbStatus === 'success' ? 'CONNECTED // 100%' : dbStatus === 'error' ? 'ERROR' : 'ACTIVE_HEALTHY'}
                 </span>
+                <span>STATUS:</span>
               </div>
             </div>
           </div>
         </div>
 
         {/* Footer Actions */}
-        <div className="flex items-center justify-end gap-2 mt-5 pt-3 border-t craft-border">
+        <div className="flex items-center justify-between mt-4 pt-3 border-t border-white/10 flex-shrink-0">
           <button
             type="button"
             onClick={onClose}
-            className="px-3.5 py-1.5 rounded-lg text-xs text-zinc-400 hover:text-zinc-200 transition-colors"
+            className="px-3.5 py-1.5 rounded-xl text-xs text-zinc-400 hover:text-white transition-colors"
           >
-            إلغاء
+            إغلاق
           </button>
           <button
             type="button"
             onClick={handleSave}
-            className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-zinc-100 text-zinc-950 text-xs font-bold hover:bg-white active:scale-95 transition-all shadow-sm"
+            className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-white text-black text-xs font-bold hover:bg-zinc-200 active:scale-95 transition-all shadow-sm"
           >
             {savedSuccess ? (
               <>
@@ -176,7 +233,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                 <span>تم الحفظ</span>
               </>
             ) : (
-              <span>حفظ الإعدادات</span>
+              <span>حفظ التغييرات</span>
             )}
           </button>
         </div>

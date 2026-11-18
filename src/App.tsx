@@ -42,14 +42,7 @@ import { tacticalAudio } from './lib/audio';
 import { Menu, CheckCircle2, X } from 'lucide-react';
 
 export function App() {
-  const [isLocked, setIsLocked] = useState(() => {
-    try {
-      if (typeof window !== 'undefined' && localStorage.getItem('moha_auth_remembered_v1') === 'true') {
-        return false;
-      }
-    } catch (e) {}
-    return true;
-  });
+  const [isLocked, setIsLocked] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isBriefingOpen, setIsBriefingOpen] = useState(false);
   const [isWatchdogOpen, setIsWatchdogOpen] = useState(false);
@@ -619,10 +612,6 @@ export function App() {
       setIsSettingsOpen(true);
     }
   };
-
-  if (isLocked) {
-    return <SecurityLock onUnlock={() => setIsLocked(false)} />;
-  }
 
   return (
     <div className="h-screen max-h-screen w-screen overflow-hidden bg-black text-white flex flex-col font-sans selection:bg-white/20">
