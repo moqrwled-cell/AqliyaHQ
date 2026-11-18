@@ -35,11 +35,14 @@ import { AlarmManagerModal } from './components/mobile/AlarmManagerModal';
 import { ClassroomBridgeModal } from './components/mobile/ClassroomBridgeModal';
 import { AlarmRingingOverlay } from './components/mobile/AlarmRingingOverlay';
 import { QuickCaptureModal } from './components/QuickCaptureModal';
+import { UnifiedBottomNav, type MainNavTab } from './components/navigation/UnifiedBottomNav';
+import { FocusedJarvisHomeScreen } from './components/home/FocusedJarvisHomeScreen';
+import { TasksAndGoalsScreen } from './components/tasks/TasksAndGoalsScreen';
 import { exportObsidianMarkdown, exportPureJSON } from './lib/exportMarkdown';
 import { scanSystemWatchdog } from './lib/watchdogEngine';
 import { GmailClassroomBridge } from './lib/classroom/gmailClassroomBridge';
 import { tacticalAudio } from './lib/audio';
-import { Menu, CheckCircle2, X } from 'lucide-react';
+import { Menu, CheckCircle2, X, Sparkles, PhoneCall, Bot } from 'lucide-react';
 
 export function App() {
   const [isLocked, setIsLocked] = useState(false);
@@ -52,6 +55,8 @@ export function App() {
   const [activeMainView, setActiveMainView] = useState<'focus' | 'discipline' | 'deck' | 'workspace' | 'vault_browser' | 'accounts' | 'swarm' | 'memory' | 'project_life' | 'opportunity_radar'>('deck');
   const [activeLayout, setActiveLayout] = useState<'tri-panel' | 'focused'>('tri-panel');
   const [mobileTab, setMobileTab] = useState<'focus' | 'discipline' | 'deck' | 'workspace' | 'missions' | 'vault_browser' | 'accounts' | 'intel' | 'radar' | 'swarm' | 'memory' | 'ai' | 'project_life' | 'opportunity_radar'>('focus');
+  const [mainNavTab, setMainNavTab] = useState<MainNavTab>('home');
+  const [isAdvisorOpen, setIsAdvisorOpen] = useState(false);
   const [isVoiceCallOpen, setIsVoiceCallOpen] = useState(false);
   const [incomingSharedText, setIncomingSharedText] = useState<string | null>(null);
   const [intelToast, setIntelToast] = useState<{ id: number; title: string; url: string } | null>(null);
@@ -652,7 +657,24 @@ export function App() {
         {/* Desktop View */}
         {activeMainView === 'focus' ? (
           <div className="hidden lg:flex flex-col h-full min-h-0 flex-1 max-w-3xl mx-auto w-full">
-            <MobileFocusHub />
+            <FocusedJarvisHomeScreen
+              onOpenAdvisor={(prompt) => {
+                setIsAdvisorOpen(true);
+                if (prompt && prompt.trim()) {
+                  handleAddChatMessage({
+                    id: `user-${Date.now()}`,
+                    role: 'user',
+                    content: prompt.trim(),
+                    created_at: new Date().toISOString(),
+                  });
+                }
+              }}
+              onNavigateTab={(tab) => {
+                if (tab === 'tasks') setActiveMainView('workspace');
+                else if (tab === 'settings') setIsSettingsOpen(true);
+                else if (tab === 'intel') setActiveMainView('deck');
+              }}
+            />
           </div>
         ) : activeMainView === 'deck' ? (
           <div className="hidden lg:flex flex-col h-full min-h-0 flex-1">
@@ -782,95 +804,94 @@ export function App() {
         )}
 
         {/* Mobile View */}
-        <div className="lg:hidden h-screen min-h-0 overflow-hidden flex flex-col bg-black">
-          {/* Universal Mobile Top Bar for tabs other than 'focus' */}
-          {mobileTab !== 'focus' && (
-            <div className="flex-shrink-0 apple-glass border-b border-white/10 px-4 py-3 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setIsSideDrawerOpen(true)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-white text-black font-bold text-xs shadow-md active:scale-95 transition-all"
-                >
-                  <Menu className="h-4 w-4" />
-                  <span>القائمة</span>
-                </button>
-                <button
-                  onClick={() => setMobileTab('focus')}
-                  className="px-2.5 py-1.5 rounded-xl bg-white/[0.05] border border-white/10 text-xs text-zinc-300 hover:text-white"
-                >
-                  خطة اليوم
-                </button>
-              </div>
+        <div className="lg:hidden h-screen min-h-0 overflow-hidden flex flex-col bg-[#080c14]">
+          {/* Universal Mobile Top Bar */}
+          <div className="flex-shrink-0 bg-[#090d16]/95 border-b border-white/10 px-3.5 py-2.5 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsBriefingOpen(true)}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-white/[0.06] border border-white/10 text-xs text-zinc-300 hover:text-white active:scale-95 transition-all"
+                title="إحاطة اليوم"
+              >
+                <Sparkles className="h-3.5 w-3.5 text-amber-400" />
+                <span className="text-[11px] font-bold">الإحاطة</span>
+              </button>
 
-              <div className="text-right">
-                <span className="text-xs font-bold text-white block">
-                  {mobileTab === 'discipline' ? 'لوحة التطور والالتزام' :
-                   mobileTab === 'missions' ? 'المشاريع المركزية' :
-                   mobileTab === 'ai' ? 'المستشار الذكي' :
-                   mobileTab === 'deck' ? 'غرفة العمليات' :
-                   mobileTab === 'intel' ? 'بنك الاستخبارات' :
-                   mobileTab === 'memory' ? 'بنك الذاكرة' : 'Moha Agent'}
-                </span>
-                <span className="text-[10px] text-zinc-400">محمد قرمان • وضع الانضباط</span>
-              </div>
+              <button
+                onClick={() => setIsVoiceCallOpen(true)}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-cyan-500/10 border border-cyan-500/25 text-xs text-cyan-300 active:scale-95 transition-all"
+                title="مكالمة صوتية مباشرة"
+              >
+                <PhoneCall className="h-3.5 w-3.5" />
+                <span className="text-[11px] font-bold">اتصال</span>
+              </button>
+
+              <button
+                onClick={() => setIsAlarmModalOpen(true)}
+                className="p-1.5 rounded-xl bg-white/[0.06] border border-white/10 text-zinc-300 hover:text-white active:scale-95 transition-all"
+                title="المنبه والتنبيهات"
+              >
+                ⏰
+              </button>
+
+              {watchdogAlerts.length > 0 && (
+                <button
+                  onClick={() => setIsWatchdogOpen(true)}
+                  className="px-2 py-1 rounded-xl bg-red-500/20 text-red-400 text-[10px] font-bold border border-red-500/30 flex items-center gap-1"
+                >
+                  <span>⚠️</span>
+                  <span>{watchdogAlerts.length}</span>
+                </button>
+              )}
+
+              <button
+                onClick={() => setIsSideDrawerOpen(true)}
+                className="p-1.5 rounded-xl bg-white/[0.06] border border-white/10 text-zinc-400 hover:text-white active:scale-95 transition-all"
+                title="القائمة الكاملة"
+              >
+                <Menu className="h-4 w-4" />
+              </button>
             </div>
-          )}
+
+            <div className="text-right">
+              <span className="text-xs font-bold text-white flex items-center gap-1.5 justify-end">
+                <span>عقلية HQ</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              </span>
+              <span className="text-[10px] text-zinc-400">
+                {mainNavTab === 'home' ? 'المركز التكتيكي' :
+                 mainNavTab === 'tasks' ? 'المهام والأهداف' :
+                 mainNavTab === 'intel' ? 'بنك الاستخبارات' : 'الإعدادات'}
+              </span>
+            </div>
+          </div>
 
           <div className="flex-1 min-h-0 overflow-y-auto">
-            {mobileTab === 'focus' && (
-              <MobileFocusHub onOpenSideDrawer={() => setIsSideDrawerOpen(true)} />
-            )}
-
-            {mobileTab === 'discipline' && (
-              <DisciplineDashboard />
-            )}
-
-            {mobileTab === 'deck' && (
-              <ExecutiveCommandCenter
-                missions={missions}
-                intel={intelItems}
-                directives={directives}
-                dossier={dossier}
-                memories={memories}
-                battleLogs={battleLogs}
-                watchdogAlerts={watchdogAlerts}
-                onNavigateSection={handleExecutiveSectionNavigation}
-                onOpenVoiceCall={() => setIsVoiceCallOpen(true)}
-                onOpenBriefing={() => setIsBriefingOpen(true)}
-                onOpenWatchdog={() => setIsWatchdogOpen(true)}
-                onSwitchToTacticalWorkspace={() => setMobileTab('missions')}
+            {mainNavTab === 'home' && (
+              <FocusedJarvisHomeScreen
+                onOpenAdvisor={(prompt) => {
+                  setIsAdvisorOpen(true);
+                  if (prompt && prompt.trim()) {
+                    handleAddChatMessage({
+                      id: `user-${Date.now()}`,
+                      role: 'user',
+                      content: prompt.trim(),
+                      created_at: new Date().toISOString(),
+                    });
+                  }
+                }}
+                onNavigateTab={(tab) => {
+                  if (tab === 'settings') setIsSettingsOpen(true);
+                  else setMainNavTab(tab);
+                }}
               />
             )}
 
-            {mobileTab === 'opportunity_radar' && (
-              <OpportunityRadarView />
+            {mainNavTab === 'tasks' && (
+              <TasksAndGoalsScreen />
             )}
 
-            {mobileTab === 'project_life' && (
-              <ProjectLifeIntelligenceHub />
-            )}
-
-            {mobileTab === 'missions' && (
-              <MissionsPanel
-                missions={missions}
-                selectedMission={selectedMission}
-                intel={intelItems}
-                directives={directives}
-                onSelectMission={setSelectedMission}
-                onUpdateMission={handleUpdateMission}
-                onAddMission={handleAddMission}
-              />
-            )}
-
-            {mobileTab === 'vault_browser' && (
-              <ProjectsVaultBrowser />
-            )}
-
-            {mobileTab === 'accounts' && (
-              <AccountsVaultPanel />
-            )}
-
-            {mobileTab === 'intel' && (
+            {mainNavTab === 'intel' && (
               <IntelDepotPanel
                 items={intelItems}
                 missions={missions}
@@ -878,55 +899,6 @@ export function App() {
                 onUpdateStatus={handleUpdateIntelStatus}
                 onUpdateItem={handleUpdateIntelItem}
                 onDeleteItem={handleDeleteIntelItem}
-              />
-            )}
-
-            {mobileTab === 'radar' && (
-              <GraphifyRadarPanel
-                missions={missions}
-                intel={intelItems}
-                directives={directives}
-                onSelectMission={setSelectedMission}
-                onTriggerGraphifyScan={() => {}}
-              />
-            )}
-
-            {mobileTab === 'memory' && (
-              <MindVaultPanel
-                dossier={dossier}
-                memories={memories}
-                battleLogs={battleLogs}
-                onAddMemory={handleAddMemory}
-                onDeleteMemory={handleDeleteMemory}
-                onUpdateDossier={handleUpdateDossier}
-              />
-            )}
-
-            {mobileTab === 'swarm' && (
-              <AgenticCommandDeck
-                missions={missions}
-                intel={intelItems}
-                memories={memories}
-                dossier={dossier}
-                battleLogs={battleLogs}
-                onOpenVoiceCall={() => setIsVoiceCallOpen(true)}
-                onStateMutation={handleStateMutation}
-              />
-            )}
-
-            {mobileTab === 'ai' && (
-              <CommanderAIPanel
-                messages={chatMessages}
-                missions={missions}
-                intel={intelItems}
-                dossier={dossier}
-                memories={memories}
-                directives={directives}
-                battleLogs={battleLogs}
-                onSendMessage={handleAddChatMessage}
-                onOpenVoiceCall={() => setIsVoiceCallOpen(true)}
-                onOpenSettings={() => setIsSettingsOpen(true)}
-                onStateMutation={handleStateMutation}
               />
             )}
           </div>
@@ -1027,12 +999,77 @@ export function App() {
         onClose={() => setIsClassroomModalOpen(false)}
       />
 
-      {/* Luxury Bottom Navigation Bar */}
-      <MobileNav
-        activeTab={mobileTab}
-        onSelectTab={setMobileTab}
-        onOpenSideDrawer={() => setIsSideDrawerOpen(true)}
+      {/* Unified Bottom Navigation (4 Tabs + Center Advisor Trigger) */}
+      <UnifiedBottomNav
+        activeTab={mainNavTab}
+        onSelectTab={(tab) => {
+          if (tab === 'settings') {
+            setIsSettingsOpen(true);
+          } else {
+            setMainNavTab(tab);
+          }
+        }}
+        onOpenAdvisor={() => setIsAdvisorOpen(true)}
       />
+
+      {/* Omnipresent Jarvis Advisor Modal / Bottom Sheet */}
+      {isAdvisorOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex flex-col justify-end lg:justify-center items-center p-0 lg:p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-2xl h-[92vh] lg:h-[82vh] bg-[#090d16] border border-white/15 rounded-t-3xl lg:rounded-3xl flex flex-col overflow-hidden shadow-2xl">
+            {/* Advisor Header */}
+            <div className="p-3 bg-white/[0.03] border-b border-white/10 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setIsAdvisorOpen(false)}
+                  className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all active:scale-95"
+                  title="إغلاق"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={() => {
+                    setIsAdvisorOpen(false);
+                    setIsVoiceCallOpen(true);
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30 flex items-center gap-1.5 text-xs font-bold transition-all border border-cyan-500/30 active:scale-95"
+                  title="بدء مكالمة صوتية مباشرة"
+                >
+                  <PhoneCall className="h-3.5 w-3.5" />
+                  <span>مكالمة صوتية</span>
+                </button>
+              </div>
+
+              <div className="text-right">
+                <h3 className="text-sm font-bold text-white flex items-center gap-1.5 justify-end">
+                  <span>المستشار الذكي (Jarvis)</span>
+                  <Sparkles className="h-4 w-4 text-cyan-400" />
+                </h3>
+                <p className="text-[10px] text-zinc-400">ذراعك اليمين • جاهز للتنفيذ والإرشاد</p>
+              </div>
+            </div>
+
+            {/* Advisor Chat & Tools Body */}
+            <div className="flex-1 min-h-0">
+              <CommanderAIPanel
+                messages={chatMessages}
+                missions={missions}
+                intel={intelItems}
+                dossier={dossier}
+                memories={memories}
+                directives={directives}
+                battleLogs={battleLogs}
+                onSendMessage={handleAddChatMessage}
+                onOpenVoiceCall={() => {
+                  setIsAdvisorOpen(false);
+                  setIsVoiceCallOpen(true);
+                }}
+                onOpenSettings={() => setIsSettingsOpen(true)}
+                onStateMutation={handleStateMutation}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Global Intel Capture Notification Toast */}
       {intelToast && (

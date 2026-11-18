@@ -100,6 +100,35 @@ export class SleepTrackerEngine {
   }
 
   /**
+   * Get current recovery score (0 - 100) based on latest night's sleep duration and quality
+   */
+  public static getRecoveryScore(): number {
+    const records = this.getAllRecords();
+    if (!records || records.length === 0) return 85;
+    const latest = records[records.length - 1];
+    if (!latest || !latest.durationMinutes) return 85;
+
+    const hours = latest.durationMinutes / 60;
+    let baseScore = 70;
+    if (hours >= 7.5 && hours <= 8.5) {
+      baseScore = 95;
+    } else if (hours >= 6.5 && hours < 7.5) {
+      baseScore = 85;
+    } else if (hours > 8.5 && hours <= 9.5) {
+      baseScore = 88;
+    } else if (hours >= 5.5 && hours < 6.5) {
+      baseScore = 72;
+    } else {
+      baseScore = 58;
+    }
+
+    if (latest.qualityRating) {
+      baseScore = Math.min(100, Math.max(40, baseScore + (latest.qualityRating - 3) * 5));
+    }
+    return baseScore;
+  }
+
+  /**
    * Save a completed sleep record
    */
   public static logSleep(
