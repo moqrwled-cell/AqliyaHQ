@@ -811,67 +811,6 @@ export function App() {
 
         {/* Mobile View */}
         <div className="lg:hidden h-screen min-h-0 overflow-hidden flex flex-col bg-[#080c14]">
-          {/* Universal Mobile Top Bar */}
-          <div className="flex-shrink-0 bg-[#090d16]/95 border-b border-white/10 px-3.5 py-2.5 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setIsBriefingOpen(true)}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-white/[0.06] border border-white/10 text-xs text-zinc-300 hover:text-white active:scale-95 transition-all"
-                title="إحاطة اليوم"
-              >
-                <Sparkles className="h-3.5 w-3.5 text-amber-400" />
-                <span className="text-[11px] font-bold">الإحاطة</span>
-              </button>
-
-              <button
-                onClick={() => setIsVoiceCallOpen(true)}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-cyan-500/10 border border-cyan-500/25 text-xs text-cyan-300 active:scale-95 transition-all"
-                title="مكالمة صوتية مباشرة"
-              >
-                <PhoneCall className="h-3.5 w-3.5" />
-                <span className="text-[11px] font-bold">اتصال</span>
-              </button>
-
-              <button
-                onClick={() => setIsAlarmModalOpen(true)}
-                className="p-1.5 rounded-xl bg-white/[0.06] border border-white/10 text-zinc-300 hover:text-white active:scale-95 transition-all"
-                title="المنبه والتنبيهات"
-              >
-                ⏰
-              </button>
-
-              {watchdogAlerts.length > 0 && (
-                <button
-                  onClick={() => setIsWatchdogOpen(true)}
-                  className="px-2 py-1 rounded-xl bg-red-500/20 text-red-400 text-[10px] font-bold border border-red-500/30 flex items-center gap-1"
-                >
-                  <span>⚠️</span>
-                  <span>{watchdogAlerts.length}</span>
-                </button>
-              )}
-
-              <button
-                onClick={() => setIsSideDrawerOpen(true)}
-                className="p-1.5 rounded-xl bg-white/[0.06] border border-white/10 text-zinc-400 hover:text-white active:scale-95 transition-all"
-                title="القائمة الكاملة"
-              >
-                <Menu className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div className="text-right">
-              <span className="text-xs font-bold text-white flex items-center gap-1.5 justify-end">
-                <span>عقلية HQ</span>
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-              </span>
-              <span className="text-[10px] text-zinc-400">
-                {mainNavTab === 'home' ? 'المركز التكتيكي' :
-                 mainNavTab === 'tasks' ? 'المهام والأهداف' :
-                 mainNavTab === 'intel' ? 'بنك الاستخبارات' : 'الإعدادات'}
-              </span>
-            </div>
-          </div>
-
           <div className="flex-1 min-h-0 overflow-y-auto">
             {mainNavTab === 'home' && (
               <FocusedJarvisHomeScreen
@@ -890,6 +829,11 @@ export function App() {
                   if (tab === 'settings') setIsSettingsOpen(true);
                   else setMainNavTab(tab);
                 }}
+                onOpenVoiceCall={() => setIsVoiceCallOpen(true)}
+                onOpenBriefing={() => setIsBriefingOpen(true)}
+                onOpenAlarm={() => setIsAlarmModalOpen(true)}
+                onOpenMenu={() => setIsSideDrawerOpen(true)}
+                watchdogCount={watchdogAlerts.length}
               />
             )}
 

@@ -108,7 +108,7 @@ export const ProjectsVaultBrowser: React.FC = () => {
       ]
     },
     {
-      title: 'عقلية | AQLIYA HQ & NexusOS',
+      title: 'Moha Agent & NexusOS',
       category: 'ai',
       icon: Cpu,
       description: 'نظام تشغيل الوكلاء الذاتي وإدارة العمليات المركزية لمحمد قرمان.',

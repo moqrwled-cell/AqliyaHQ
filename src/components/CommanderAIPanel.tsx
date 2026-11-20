@@ -416,7 +416,7 @@ export const CommanderAIPanel: React.FC<CommanderAIPanelProps> = ({
 
               {msg.role === 'assistant' && (
                 <div className="mt-2.5 pt-2 border-t border-white/5 flex items-center justify-between text-[11px] text-zinc-400">
-                  <span className="text-[10px] text-emerald-400/80 font-medium">مستشار عقلية</span>
+                  <span className="text-[10px] text-emerald-400/80 font-medium">المستشار الذكي</span>
                   <button
                     onClick={() => handleCopy(msg.content, msg.id)}
                     className="opacity-60 group-hover:opacity-100 hover:text-white transition-opacity p-0.5"

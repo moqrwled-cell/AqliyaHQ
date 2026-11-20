@@ -7,7 +7,7 @@ export function exportObsidianMarkdown(data: {
   logs: BattleLog[];
   memories: CommanderMemory[];
 }) {
-  let combinedMarkdown = `# عقلية | AQLIYA HQ — أرشيف القيادة الشامل
+  let combinedMarkdown = `# Moha Agent — أرشيف القيادة الشامل
 > تاريخ التصدير: ${new Date().toLocaleString('ar-SA')} | صيغة Obsidian متوافقة 100%
 
 ---

@@ -153,15 +153,28 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
           {/* Google Gemini API Key */}
           <div className="rounded-xl p-3.5 bg-white/[0.03] border border-white/10 space-y-2">
             <div className="flex items-center justify-between">
-              <a
-                href="https://aistudio.google.com/app/apikey"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[10px] text-cyan-400 hover:underline flex items-center gap-1 font-mono"
-              >
-                <span>احصل على مفتاح مجاني</span>
-                <ExternalLink className="h-2.5 w-2.5" />
-              </a>
+              <div className="flex items-center gap-2">
+                <a
+                  href="https://aistudio.google.com/app/apikey"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[10px] text-cyan-400 hover:underline flex items-center gap-1 font-mono"
+                >
+                  <span>مفتاح جديد</span>
+                  <ExternalLink className="h-2.5 w-2.5" />
+                </a>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const restored = geminiConfig.resetToDefaultKey();
+                    setApiKey(restored);
+                    tacticalAudio.playConfirm();
+                  }}
+                  className="text-[10px] text-zinc-400 hover:text-white underline font-mono"
+                >
+                  استعادة المفتاح المدمج
+                </button>
+              </div>
               <label className="font-bold text-white flex items-center gap-1.5">
                 <Sparkles className="h-3.5 w-3.5 text-cyan-400" />
                 <span>مفتاح Google Gemini API</span>
@@ -172,11 +185,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
               type="password"
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
-              placeholder="AIzaSy..."
+              placeholder="AIzaSy... أو المفتاح المدمج"
               className="w-full rounded-xl border border-white/10 bg-black/60 px-3 py-2 text-xs font-mono text-white outline-none focus:border-cyan-500/50"
             />
-            <p className="text-[10px] text-zinc-500 leading-relaxed">
-              المفتاح يُحفظ في جهازك فقط ولا يمر عبر أي خوادم وسيطة. يُستخدم لتشغيل المستشار الذكي وتحليل الروابط.
+            <p className="text-[10px] text-emerald-400/90 leading-relaxed flex items-center gap-1">
+              <ShieldCheck className="h-3 w-3" />
+              <span>المفتاح مدمج ومحفوظ محلياً داخل التطبيق ليعمل دائماً دون انقطاع.</span>
             </p>
           </div>
 

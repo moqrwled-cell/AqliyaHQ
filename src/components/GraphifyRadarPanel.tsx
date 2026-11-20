@@ -83,7 +83,7 @@ export const GraphifyRadarPanel: React.FC<GraphifyRadarPanelProps> = ({
     // Commander Hub Root
     n.push({
       id: 'root-hq',
-      label: 'عقلية HQ',
+      label: 'Moha HQ',
       subLabel: 'نواة العمليات المركزية',
       type: 'commander',
       x: cx,
