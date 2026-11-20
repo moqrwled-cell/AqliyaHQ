@@ -59,32 +59,36 @@ jobs:
       - name: Rename & Prepare APK
         run: |
           mkdir -p build-output
+          cp android/app/build/outputs/apk/debug/app-debug.apk build-output/MohaAgent-v1.1.0.apk
           cp android/app/build/outputs/apk/debug/app-debug.apk build-output/AqliyaHQ-Android-v1.0.apk
 
       - name: Upload APK as Workflow Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: AqliyaHQ-Android-v1.0-APK
-          path: build-output/AqliyaHQ-Android-v1.0.apk
+          name: MohaAgent-Android-v1.1.0-APK
+          path: build-output/MohaAgent-v1.1.0.apk
           retention-days: 30
 
       - name: Create GitHub Release with APK
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
         with:
-          tag_name: v1.0.0-${{ github.run_number }}
-          name: AQLIYA HQ Android Release v1.0.0 (Build ${{ github.run_number }})
+          tag_name: v1.1.0-${{ github.run_number }}
+          name: Moha Agent Android v1.1.0 (Build ${{ github.run_number }})
           body: |
-            ## 🚀 إطلاق تطبيق عقلية للأندرويد (AQLIYA HQ Mobile APK)
-            - **الإصدار:** v1.0.0 (Build ${{ github.run_number }})
-            - **الحالة:** جاهز للتثبيت المباشر على هاتف الأندرويد.
+            ## 🚀 إطلاق تطبيق Moha Agent للأندرويد v1.1.0
+            - **الإصدار:** v1.1.0 (Build ${{ github.run_number }})
+            - **الأيقونة:** أيقونة محمد الكرتونية الفاخرة الجديدة.
+            - **التوقيع الرقمي الموحد:** تم تضمين مفتاح توقيع دائم (Permanent Keystore) لحل مشكلة "التطبيق ليس مثبتاً" وضمان قبول التحديثات التلقائية دائماً.
+            - **تنبيه:** إذا كانت لديك نسخة قديمة مثبتة بمفتاح قديم، يرجى حذف النسخة القديمة مرة واحدة فقط ثم تثبيت هذا الإصدار.
             - **الميزات:**
-              - التقاط سريع للريلزات والفيديوهات عبر زر المشاركة.
-              - مكالمة صوتية حية بدون لمس الشاشة (Hands-Free).
-              - محرك Google Gemini فائق السرعة مدمج ومفعل.
-              - مزامنة سحابية لحظية مع قاعدة بيانات Supabase.
-              - رادار شبكة الأفكار ومتابعة مشاريع NexusOS.
-          files: build-output/AqliyaHQ-Android-v1.0.apk
+              - أسلوب مستشار ذكي إنساني وواقعي 100%.
+              - ساعة وتاريخ رقمي حي مع أكثر من 100 مقولة عالمية ملهمة.
+              - مفتاح Gemini مدمج ومحفوظ تلقائياً.
+              - مشاركة فورية للفيديوهات وحفظ الاستخبارات بلمسة واحدة.
+          files: |
+            build-output/MohaAgent-v1.1.0.apk
+            build-output/AqliyaHQ-Android-v1.0.apk
           draft: false
           prerelease: false
         env:
