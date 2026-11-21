@@ -53,7 +53,7 @@ export function App() {
   const [isSideDrawerOpen, setIsSideDrawerOpen] = useState(false);
   const [isAlarmModalOpen, setIsAlarmModalOpen] = useState(false);
   const [isClassroomModalOpen, setIsClassroomModalOpen] = useState(false);
-  const [activeMainView, setActiveMainView] = useState<'focus' | 'discipline' | 'deck' | 'workspace' | 'vault_browser' | 'accounts' | 'swarm' | 'memory' | 'project_life' | 'opportunity_radar'>('deck');
+  const [activeMainView, setActiveMainView] = useState<'focus' | 'discipline' | 'deck' | 'workspace' | 'vault_browser' | 'accounts' | 'swarm' | 'memory' | 'project_life' | 'opportunity_radar'>('focus');
   const [activeLayout, setActiveLayout] = useState<'tri-panel' | 'focused'>('tri-panel');
   const [mobileTab, setMobileTab] = useState<'focus' | 'discipline' | 'deck' | 'workspace' | 'missions' | 'vault_browser' | 'accounts' | 'intel' | 'radar' | 'swarm' | 'memory' | 'ai' | 'project_life' | 'opportunity_radar'>('focus');
   const [mainNavTab, setMainNavTab] = useState<MainNavTab>('home');
@@ -810,7 +810,7 @@ export function App() {
         )}
 
         {/* Mobile View */}
-        <div className="lg:hidden h-screen min-h-0 overflow-hidden flex flex-col bg-[#080c14]">
+        <div className="lg:hidden flex-1 min-h-0 flex flex-col bg-[#080c14]">
           <div className="flex-1 min-h-0 overflow-y-auto">
             {mainNavTab === 'home' && (
               <FocusedJarvisHomeScreen

@@ -49,8 +49,7 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
   const [userHint, setUserHint] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisDone, setAnalysisDone] = useState(false);
-  const [countdown, setCountdown] = useState(4);
-  const [isManualEdit, setIsManualEdit] = useState(false);
+  const [isManualEdit, setIsManualEdit] = useState(true);
 
   // Audio Scanner Speech Recognition States
   const [isListeningAudio, setIsListeningAudio] = useState(false);
@@ -69,17 +68,6 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
       }
     };
   }, [initialText]);
-
-  // Auto-save countdown if user does not touch anything (1-tap background save)
-  useEffect(() => {
-    if (isManualEdit) return;
-    if (countdown > 0) {
-      const timer = setTimeout(() => setCountdown((c) => c - 1), 1000);
-      return () => clearTimeout(timer);
-    } else if (countdown === 0 && !isManualEdit) {
-      handleSave();
-    }
-  }, [countdown, isManualEdit]);
 
   const runAnalysis = async (text: string, hint?: string, spokenWords?: string) => {
     if (!text || !text.trim()) return;
@@ -263,28 +251,18 @@ export const QuickCaptureModal: React.FC<QuickCaptureModalProps> = ({
           </button>
         </div>
 
-        {/* 1-Tap Instant Background Save Bar */}
-        <div className="p-2.5 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-between gap-2 mb-3 flex-shrink-0">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => handleSave()}
-              className="px-3 py-1.5 rounded-xl bg-emerald-400 hover:bg-emerald-300 text-black font-bold text-xs shadow-md active:scale-95 transition-all flex items-center gap-1.5"
-            >
-              <Sparkles className="h-3.5 w-3.5 fill-current" />
-              <span>حفظ فوري بلمسة واحدة</span>
-            </button>
-            {countdown > 0 && !isManualEdit && (
-              <span className="text-[11px] text-emerald-300 font-mono">
-                (تلقائياً خلال {countdown}ث)
-              </span>
-            )}
-          </div>
+        {/* Top Save & Quick Action Bar */}
+        <div className="p-2.5 rounded-2xl bg-white/[0.04] border border-white/10 flex items-center justify-between gap-2 mb-3 flex-shrink-0">
           <button
-            onClick={() => setIsManualEdit(true)}
-            className="text-[10px] text-zinc-400 hover:text-white underline"
+            onClick={() => handleSave()}
+            className="px-3.5 py-1.5 rounded-xl bg-white hover:bg-zinc-200 text-black font-bold text-xs shadow-md active:scale-95 transition-all flex items-center gap-1.5"
           >
-            تعديل قبل الحفظ
+            <Sparkles className="h-3.5 w-3.5 fill-current" />
+            <span>حفظ الاستخبارات بلمسة واحدة</span>
           </button>
+          <span className="text-[11px] text-zinc-400">
+            راجع البيانات أو عدّلها ثم اضغط حفظ
+          </span>
         </div>
 
         {/* 1. Instant Audio Scanner Card (استماع وتحليل صوت الفيديو) */}

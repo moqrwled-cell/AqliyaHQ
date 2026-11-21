@@ -26,7 +26,7 @@ import {
 import { UnifiedStorage, type SystemGoal, type TacticalTask } from '../../lib/storage/unifiedStorage';
 import { SleepTrackerEngine } from '../../lib/sleepTrackerEngine';
 import { tacticalAudio } from '../../lib/audio';
-import { INSPIRATIONAL_QUOTES } from '../../lib/quotes/inspirationalQuotes';
+import { HeroClockQuotesCard } from './HeroClockQuotesCard';
 
 interface FocusedJarvisHomeScreenProps {
   onOpenAdvisor: (initialPrompt?: string) => void;
@@ -51,57 +51,6 @@ export const FocusedJarvisHomeScreen: React.FC<FocusedJarvisHomeScreenProps> = (
   const [tasks, setTasks] = useState<TacticalTask[]>(() => UnifiedStorage.getTasks());
   const [periodFocus, setPeriodFocus] = useState(() => UnifiedStorage.getPeriodFocus());
   const [sleepScore, setSleepScore] = useState(() => SleepTrackerEngine.getRecoveryScore());
-
-  // Live Digital Clock & Date
-  const [currentTime, setCurrentTime] = useState(() => new Date());
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const timeStr = currentTime.toLocaleTimeString('ar-EG', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: true,
-  });
-
-  const fullDateStr = currentTime.toLocaleDateString('ar-EG', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
-
-  // Dynamic Quotes Rotation (105+ world classics & leaders quotes)
-  const getDayOfYearIndex = () => {
-    const now = new Date();
-    const start = new Date(now.getFullYear(), 0, 0);
-    const diff = (now.getTime() - start.getTime()) + ((start.getTimezoneOffset() - now.getTimezoneOffset()) * 60 * 1000);
-    const oneDay = 1000 * 60 * 60 * 24;
-    const day = Math.floor(diff / oneDay);
-    return Math.abs(day) % INSPIRATIONAL_QUOTES.length;
-  };
-
-  const [quoteIndex, setQuoteIndex] = useState(getDayOfYearIndex);
-
-  const handleNextQuote = () => {
-    tacticalAudio.playBlip();
-    setQuoteIndex((prev) => (prev + 1) % INSPIRATIONAL_QUOTES.length);
-  };
-
-  const currentQuote = INSPIRATIONAL_QUOTES[quoteIndex] || INSPIRATIONAL_QUOTES[0];
-
-  const categoryLabels: Record<string, { label: string; color: string }> = {
-    resilience: { label: 'الصمود وتحدي الصعاب', color: 'text-amber-400 bg-amber-500/10 border-amber-500/20' },
-    discipline: { label: 'الانضباط وبناء الذات', color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' },
-    leadership: { label: 'القيادة والرؤية', color: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/20' },
-    wisdom: { label: 'حكمة وفلسفة', color: 'text-purple-400 bg-purple-500/10 border-purple-500/20' },
-    focus: { label: 'التركيز والإنتاجية', color: 'text-rose-400 bg-rose-500/10 border-rose-500/20' },
-  };
 
   // Focus Timer State
   const [isTimerRunning, setIsTimerRunning] = useState(false);
@@ -208,123 +157,15 @@ export const FocusedJarvisHomeScreen: React.FC<FocusedJarvisHomeScreenProps> = (
       {/* ------------------------------------------------------------- */}
       {/* HERO SECTION: DIGITAL CLOCK, ARABIC DATE & 100+ QUOTES CARD */}
       {/* ------------------------------------------------------------- */}
-      <div className="rounded-3xl bg-gradient-to-b from-white/[0.07] via-white/[0.03] to-transparent border border-white/10 p-4 sm:p-5 shadow-2xl relative overflow-hidden backdrop-blur-xl space-y-4">
-        {/* Subtle background ambient lights */}
-        <div className="absolute -top-12 -right-12 w-32 h-32 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-12 -left-12 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-
-        {/* Action Controls & Status Bar */}
-        <div className="flex items-center justify-between gap-2 flex-wrap">
-          <div className="flex items-center gap-1.5">
-            {onOpenVoiceCall && (
-              <button
-                onClick={onOpenVoiceCall}
-                className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl bg-cyan-500/10 border border-cyan-500/25 text-xs text-cyan-300 hover:bg-cyan-500/20 active:scale-95 transition-all flex items-center gap-1.5"
-                title="مكالمة صوتية مباشرة"
-              >
-                <PhoneCall className="h-3.5 w-3.5" />
-                <span className="text-[11px] font-bold hidden sm:inline">اتصال</span>
-              </button>
-            )}
-
-            {onOpenBriefing && (
-              <button
-                onClick={onOpenBriefing}
-                className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl bg-white/[0.05] border border-white/10 text-xs text-zinc-300 hover:text-white active:scale-95 transition-all flex items-center gap-1.5"
-                title="إحاطة اليوم"
-              >
-                <Sparkles className="h-3.5 w-3.5 text-amber-400" />
-                <span className="text-[11px] font-bold hidden sm:inline">الإحاطة</span>
-              </button>
-            )}
-
-            {onOpenAlarm && (
-              <button
-                onClick={onOpenAlarm}
-                className="p-1.5 rounded-xl bg-white/[0.05] border border-white/10 text-zinc-300 hover:text-white active:scale-95 transition-all"
-                title="المنبه والتنبيهات"
-              >
-                ⏰
-              </button>
-            )}
-
-            {watchdogCount > 0 && (
-              <div className="px-2 py-1 rounded-xl bg-red-500/20 text-red-400 text-[10px] font-bold border border-red-500/30 flex items-center gap-1">
-                <span>⚠️</span>
-                <span>{watchdogCount}</span>
-              </div>
-            )}
-
-            {onOpenMenu && (
-              <button
-                onClick={onOpenMenu}
-                className="p-1.5 rounded-xl bg-white/[0.05] border border-white/10 text-zinc-400 hover:text-white active:scale-95 transition-all"
-                title="القائمة"
-              >
-                <Menu className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2">
-            {/* Period Focus Pill */}
-            {periodFocus.periodTitle && (
-              <div className="hidden sm:flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-300">
-                <Sparkles className="h-3 w-3" />
-                <span>{periodFocus.periodTitle}</span>
-              </div>
-            )}
-
-            {/* Recovery Pill */}
-            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.05] border border-white/10 text-[11px] text-zinc-300 font-mono">
-              <Moon className="h-3 w-3 text-cyan-400" />
-              <span>الاستشفاء {sleepScore}%</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Live Digital Clock & Full Arabic Date */}
-        <div className="text-center py-2 space-y-1">
-          <div className="text-4xl sm:text-5xl font-black tracking-wider text-white font-mono drop-shadow-[0_2px_15px_rgba(255,255,255,0.2)]">
-            {timeStr}
-          </div>
-          <div className="text-xs sm:text-sm font-medium text-zinc-400">
-            {fullDateStr}
-          </div>
-        </div>
-
-        {/* Dynamic Quotes Card (100+ World Classics & Leaders) */}
-        <div 
-          onClick={handleNextQuote}
-          className="group relative cursor-pointer rounded-2xl bg-black/40 hover:bg-black/60 border border-white/10 hover:border-white/20 p-4 transition-all duration-300 active:scale-[0.99] shadow-inner"
-          title="انقر لتغيير المقولة"
-        >
-          <div className="flex items-center justify-between mb-2.5">
-            <div className="flex items-center gap-1.5 text-[10px] text-zinc-400 group-hover:text-cyan-400 transition-colors">
-              <Shuffle className="h-3 w-3 group-hover:rotate-180 transition-transform duration-500" />
-              <span>انقر لتغيير الحكمة</span>
-            </div>
-
-            <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${categoryLabels[currentQuote.category]?.color || 'text-zinc-300 bg-white/5 border-white/10'}`}>
-              {categoryLabels[currentQuote.category]?.label || 'حكمة'}
-            </span>
-          </div>
-
-          <p className="text-sm sm:text-base font-semibold text-zinc-100 leading-relaxed text-right font-sans mb-3 pr-1">
-            «{currentQuote.text}»
-          </p>
-
-          <div className="flex items-center justify-start gap-2 text-xs text-amber-300/90 font-medium">
-            <span>— {currentQuote.author}</span>
-            {currentQuote.source && (
-              <>
-                <span className="text-zinc-600">•</span>
-                <span className="text-zinc-400 text-[11px] italic font-serif">({currentQuote.source})</span>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
+      <HeroClockQuotesCard
+        onOpenVoiceCall={onOpenVoiceCall}
+        onOpenBriefing={onOpenBriefing}
+        onOpenAlarm={onOpenAlarm}
+        onOpenMenu={onOpenMenu}
+        watchdogCount={watchdogCount}
+        sleepScore={sleepScore}
+        periodTitle={periodFocus.periodTitle}
+      />
 
       {/* ------------------------------------------------------------- */}
       {/* 1. ماذا يجب أن أفعل الآن؟ (What should I do right now?)         */}

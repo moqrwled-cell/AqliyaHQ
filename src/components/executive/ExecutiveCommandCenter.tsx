@@ -46,6 +46,7 @@ import { ProjectLifeEngine } from '../../lib/project-life/projectLifeEngine';
 import { OpportunityRadarEngine } from '../../lib/opportunity-radar/opportunityRadarEngine';
 import { MissionControlEngine } from '../../lib/agentic-os/missionControlEngine';
 import { tacticalAudio } from '../../lib/audio';
+import { HeroClockQuotesCard } from '../home/HeroClockQuotesCard';
 
 export type ExecutiveSection = 
   | 'command_center'
@@ -123,6 +124,13 @@ export const ExecutiveCommandCenter: React.FC<ExecutiveCommandCenterProps> = ({
 
   return (
     <div className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-4 text-zinc-100 animate-fadeIn">
+      {/* Hero Clock, Date & 100+ Inspirational Quotes */}
+      <HeroClockQuotesCard
+        onOpenVoiceCall={onOpenVoiceCall}
+        onOpenBriefing={onOpenBriefing}
+        watchdogCount={watchdogAlerts.length}
+      />
+
       {/* --------------------------------------------------------------------- */}
       {/* 1. TOP EXECUTIVE GREETING & RHYTHM HUD */}
       {/* --------------------------------------------------------------------- */}
@@ -134,13 +142,13 @@ export const ExecutiveCommandCenter: React.FC<ExecutiveCommandCenterProps> = ({
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold">
-                المقر التنفيذي الموحد AQLIYA HQ
+                Moha Agent • مركز العمليات
               </span>
               <span className="text-xs text-zinc-400 font-mono">{todayStr}</span>
             </div>
 
             <h2 className="text-2xl font-bold text-white tracking-tight">
-              أهلاً بك في غرفة العمليات، يا قائد محمد
+              أهلاً بك يا محمد 🫡
             </h2>
 
             <p className="text-xs text-zinc-300 mt-1 max-w-2xl leading-relaxed">
